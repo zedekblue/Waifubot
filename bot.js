@@ -30,12 +30,14 @@ client.on('message', message => {
 		.setColor(0xFF0000)
 		.setDescription('Loading...');
 		message.channel.send(embed).then(msg=>{
-			id = msg.id;
+
+			
+			id = msg.id; //saves id of message to id
 
 			//continues to loop until exit command is sent
 			async.whilst(
 			function testCondition(what) {what(null, keepLooping)},
-			function increaseCounter(next) {
+			function actualLoop(next) {
 
 
 				//gets the server status
@@ -80,11 +82,8 @@ client.on('message', message => {
 		});
 		
 	//when exit command is sent, stop the above loop
-	//todo, edit or delete message on exit. Currently just posting to console.
 	} else if(message.content === stCommand) {
 		keepLooping = false;
-		console.log('Loop Stopped, Please delete message');
-		console.log(id);
 		const newerEmbed = new RichEmbed()
 		.setTitle('Bot Offline...')
 		.setColor(0xFF0000)
