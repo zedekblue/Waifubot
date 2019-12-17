@@ -1,0 +1,8 @@
+{
+	"name": "waifubot",
+	"version": "1.0.1",
+	"description": "Personal Discord Bot",
+	"main": "bot.js",
+	"author": "『『 Zeal 』』#0058",
+	"dependencies": {}
+	}
