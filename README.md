@@ -1,0 +1,2 @@
+# Waifubot
+ Personal Discord Bot
