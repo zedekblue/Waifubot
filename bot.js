@@ -10,7 +10,7 @@ var stCommand = '.st'; // Command for stopping
 var mcIP = '174.23.176.52';
 var mcPort = 41236;
 var {title,desc} = '';
-var keepLooping = false;
+var {keepLooping,off} = false;
 var id = 0;
 
 //this makes sleep work
@@ -58,19 +58,29 @@ client.on('message', message => {
 						} else {
 							desc = '**0/10**';
 						}
+						off = false;
 					} else {
 						title = '**Server is offline**';
-						desc = '';
+						desc = 'Please notify Zeal\nRestoring from a backup may be necessary';
+						off = true;
 					}
 				});
 				sleep(500).then(() => { //stops message from being posted before status is updated
 					var today = new Date();
 					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
-					const newEmbed = new RichEmbed()
-						.setTitle(title)
-						.setColor(0x00FF0F)
-						.setDescription(desc + "\n Last Updated " + today + " MST");
-					msg.edit(newEmbed).catch(console.log);
+					if (off === true){
+						const newEmbed = new RichEmbed()
+							.setTitle(title)
+							.setColor(0xFF0000)
+							.setDescription(desc + "\nLast Updated " + today + " MST");
+						msg.edit(newEmbed).catch(console.log);
+					} else {
+						const newEmbed = new RichEmbed()
+							.setTitle(title)
+							.setColor(0x00FF0F)
+							.setDescription(desc + "\nLast Updated " + today + " MST");
+						msg.edit(newEmbed).catch(console.log);
+					}
 				})
 
 
