@@ -7,10 +7,13 @@ var request = require('request');
 var async = require("async");
 var mcCommand = '.mc'; // Command for triggering
 var stCommand = '.st'; // Command for stopping
+var mtCommandStart = '.ms'; //Command to Start Server Maintenance
+var mtCommandStop = '.me'; //Command to Stop Server Maintenance
+var btCommandStart = '.bms'; //Command to Start Bot Maintenance
 var mcIP = '174.23.176.52';
 var mcPort = 41236;
-var {title,desc,body} = '';
-var {keepLooping,off,emtpyServ} = false;
+var {title,desc} = '';
+var {keepLooping,off,emptyServ,maintenance} = false;
 var id = 0;
 
 //this makes sleep work
@@ -50,18 +53,27 @@ client.on('message', message => {
 						desc = '**n/a**';
 					}
 					body = JSON.parse(body);
-					playerz = body.players.list;
 					//assigns server status if no error
-					if(body.debug.ping) {
+					if(body.online) {
 						title = 'Server is online';
+						//success, server online, everything running
 						if(body.players.online) {
 							desc = '**' + body.players.online + '/' + body.players.max + '**';
 							emptyServ = false;
+							playerz = body.players.list;
 						} else {
-							desc = '**0/' + body.players.max + '**';
-							emptyServ = true;
+							//server is online but booting
+							if(body.players.max === null){
+								desc = 'Server is booting up'
+								emptyServ = true;
+							//server is online but no players
+							} else {
+								desc = '**0/' + body.players.max + '**';
+								emptyServ = true;
+							}
 						}
 						off = false;
+						//fail, server is offline
 					} else {
 						title = '**Server is offline**';
 						desc = 'Please notify Zeal\nRestoring from a backup may be necessary';
@@ -71,25 +83,36 @@ client.on('message', message => {
 				sleep(1000).then(() => { //stops message from being posted before status is updated
 					var today = new Date();
 					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
-					if (off === true){
+					if (maintenance === true){
 						const newEmbed = new RichEmbed()
-							.setTitle(title)
-							.setColor(0xFF0000)
-							.setDescription(desc + "\nLast Updated " + today + " MST");
+							.setTitle('**Undergoing Maintenance**')
+							.setColor(0x6600CC)
+							.setDescription("Please do not try to log in!\nLast Updated " + today + " MST");
 						msg.edit(newEmbed).catch(console.log);
 					} else {
-						if (emptyServ === true){
+						if (off === true){
+							//offline
 							const newEmbed = new RichEmbed()
 								.setTitle(title)
-								.setColor(0x00FF0F)
+								.setColor(0xFF0000)
 								.setDescription(desc + "\nLast Updated " + today + " MST");
 							msg.edit(newEmbed).catch(console.log);
 						} else {
-							const newEmbed = new RichEmbed()
-								.setTitle(title)
-								.setColor(0x00FF0F)
-								.setDescription(desc + '\n' + playerz + "\nLast Updated " + today + " MST");
-							msg.edit(newEmbed).catch(console.log);
+							if (emptyServ === true){
+								//online but empty
+								const newEmbed = new RichEmbed()
+									.setTitle(title)
+									.setColor(0xFF9900)
+									.setDescription(desc + "\nLast Updated " + today + " MST");
+								msg.edit(newEmbed).catch(console.log);
+							} else {
+								//online with players
+								const newEmbed = new RichEmbed()
+									.setTitle(title)
+									.setColor(0x00FF0F)
+									.setDescription(desc + '\n' + playerz + "\nLast Updated " + today + " MST");
+								msg.edit(newEmbed).catch(console.log);
+							}
 						}
 					}
 				})
@@ -109,6 +132,32 @@ client.on('message', message => {
 		.setTitle('Bot Offline...')
 		.setColor(0xFF0000)
 		.setDescription('');
+		message.channel.fetchMessages({around: id, limit: 1}).then(msg => {
+			const fetchedMsg = msg.first();
+			fetchedMsg.edit(newerEmbed);
+		});
+	} else if(message.content === mtCommandStart){
+		maintenance = true;
+		var today = new Date();
+		today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+		const newerEmbed = new RichEmbed()
+		.setTitle('**Undergoing Maintenance**')
+		.setColor(0x6600CC)
+		.setDescription("Please do not try to log in!\nLast Updated " + today + " MST");
+		message.channel.fetchMessages({around: id, limit: 1}).then(msg => {
+			const fetchedMsg = msg.first();
+			fetchedMsg.edit(newerEmbed);
+		});
+	} else if(message.content === mtCommandStop){
+		maintenance = false;
+	} else if(message.content === btCommandStart) {
+		keepLooping = false;
+		var today = new Date();
+		today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+		const newerEmbed = new RichEmbed()
+		.setTitle('**Waifubot Undergoing Maintenance!**')
+		.setColor(0x6600CC)
+		.setDescription('As of ' + today + ' MST');
 		message.channel.fetchMessages({around: id, limit: 1}).then(msg => {
 			const fetchedMsg = msg.first();
 			fetchedMsg.edit(newerEmbed);
