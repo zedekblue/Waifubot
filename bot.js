@@ -9,7 +9,7 @@ var mcCommand = '.mc'; // Command for triggering
 var stCommand = '.st'; // Command for stopping
 var mcIP = '174.23.176.52';
 var mcPort = 41236;
-var {title,desc} = '';
+var {title,desc,body} = '';
 var {keepLooping,off} = false;
 var id = 0;
 
@@ -41,7 +41,7 @@ client.on('message', message => {
 
 
 				//gets the server status
-				var url = 'http://mcapi.us/server/status?ip=' + mcIP + '&port=' + mcPort;
+				var url = 'https://api.mcsrvstat.us/2/' + mcIP + ':' + mcPort';
 				request(url, function(err, response, body) {
 					//checks for error
 					if(err) {
@@ -50,13 +50,14 @@ client.on('message', message => {
 						desc = '**n/a**';
 					}
 					body = JSON.parse(body);
+					playerz = body.players.list;
 					//assigns server status if no error
-					if(body.online) {
+					if(body.debug.ping) {
 						title = 'Server is online';
-						if(body.players.now) {
-							desc = '**' + body.players.now + '/10**';
+						if(body.players.online) {
+							desc = '**' + body.players.online + '/' + body.players.max + '**';
 						} else {
-							desc = '**0/10**';
+							desc = '**0/' + body.players.max + '**';
 						}
 						off = false;
 					} else {
@@ -65,7 +66,7 @@ client.on('message', message => {
 						off = true;
 					}
 				});
-				sleep(500).then(() => { //stops message from being posted before status is updated
+				sleep(1000).then(() => { //stops message from being posted before status is updated
 					var today = new Date();
 					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
 					if (off === true){
@@ -78,7 +79,7 @@ client.on('message', message => {
 						const newEmbed = new RichEmbed()
 							.setTitle(title)
 							.setColor(0x00FF0F)
-							.setDescription(desc + "\nLast Updated " + today + " MST");
+							.setDescription(desc + '\n' + playerz + "\nLast Updated " + today + " MST");
 						msg.edit(newEmbed).catch(console.log);
 					}
 				})
