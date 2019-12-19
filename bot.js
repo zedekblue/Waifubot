@@ -10,7 +10,7 @@ var stCommand = '.st'; // Command for stopping
 var mcIP = '174.23.176.52';
 var mcPort = 41236;
 var {title,desc,body} = '';
-var {keepLooping,off} = false;
+var {keepLooping,off,emtpyServ} = false;
 var id = 0;
 
 //this makes sleep work
@@ -41,7 +41,7 @@ client.on('message', message => {
 
 
 				//gets the server status
-				var url = 'https://api.mcsrvstat.us/2/' + mcIP + ':' + mcPort';
+				var url = 'https://api.mcsrvstat.us/2/' + mcIP + ':' + mcPort;
 				request(url, function(err, response, body) {
 					//checks for error
 					if(err) {
@@ -56,8 +56,10 @@ client.on('message', message => {
 						title = 'Server is online';
 						if(body.players.online) {
 							desc = '**' + body.players.online + '/' + body.players.max + '**';
+							emptyServ = false;
 						} else {
 							desc = '**0/' + body.players.max + '**';
+							emptyServ = true;
 						}
 						off = false;
 					} else {
@@ -76,11 +78,19 @@ client.on('message', message => {
 							.setDescription(desc + "\nLast Updated " + today + " MST");
 						msg.edit(newEmbed).catch(console.log);
 					} else {
-						const newEmbed = new RichEmbed()
-							.setTitle(title)
-							.setColor(0x00FF0F)
-							.setDescription(desc + '\n' + playerz + "\nLast Updated " + today + " MST");
-						msg.edit(newEmbed).catch(console.log);
+						if (emptyServ === true){
+							const newEmbed = new RichEmbed()
+								.setTitle(title)
+								.setColor(0x00FF0F)
+								.setDescription(desc + "\nLast Updated " + today + " MST");
+							msg.edit(newEmbed).catch(console.log);
+						} else {
+							const newEmbed = new RichEmbed()
+								.setTitle(title)
+								.setColor(0x00FF0F)
+								.setDescription(desc + '\n' + playerz + "\nLast Updated " + today + " MST");
+							msg.edit(newEmbed).catch(console.log);
+						}
 					}
 				})
 
