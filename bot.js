@@ -1,4 +1,5 @@
 var auth = require('./auth.json');
+var servAddress = require('./ip.json');
 const { Client, RichEmbed } = require('discord.js');
 const client = new Client();
 client.login(auth.token);
@@ -10,8 +11,8 @@ var stCommand = '.st'; // Command for stopping
 var mtCommandStart = '.ms'; //Command to Start Server Maintenance
 var mtCommandStop = '.me'; //Command to Stop Server Maintenance
 var btCommandStart = '.bms'; //Command to Start Bot Maintenance
-var mcIP = '174.23.176.52';
-var mcPort = 41236;
+var mcIP = servAddress.ip;
+var mcPort = servAddress.port;
 var {title,desc} = '';
 var {keepLooping,off,emptyServ,maintenance} = false;
 var id = 0;
@@ -76,7 +77,7 @@ client.on('message', message => {
 						//fail, server is offline
 					} else {
 						title = '**Server is offline**';
-						desc = 'Please notify Zeal\nRestoring from a backup may be necessary';
+						desc = 'API may just be down.\nIf Server is actually offline, please notify Zeal\nRestoring from a backup may be necessary';
 						off = true;
 					}
 				});
