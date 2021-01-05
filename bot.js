@@ -631,6 +631,22 @@ client.on('message', message => {
 
 
 
+	//help command
+	if (command === helpCommand) {
+		const embed = new Discord.MessageEmbed()
+		.setTitle('Help')
+		.setColor(0x6600CC)
+		.setDescription(`List of commands:\n ${prefix}${beginPosting} | Creates the status message\n${prefix}${beginPostingEdit} | Edits existing embed and begins updating it\n${prefix}${setRestrictedChannel} | Sets channel for commands to be accepted in\n ${prefix}${beginMaint} | Bot Owner only - begins maint\n${prefix}${endMaint} | Bot Onwer only - ends maint`);
+		message.reply(embed)
+	}
+
+
+
+
+
+
+
+
 
 
 
