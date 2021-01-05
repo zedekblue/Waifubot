@@ -13,7 +13,7 @@ var prefix = '.';
 var beginPosting = 'mc';
 var beginMaint = 'mts';
 var endMaint = 'mte'
-var helpCommand = 'help';
+var helpCommand = 'halp';
 var setRestrictedChannel = 'setchan';
 var beginPostingEdit = 'emc';
 
@@ -145,7 +145,7 @@ client.on('message', message => {
 						catch (e) {
 							//could not parse
 							title = '**Server is offline**';
-							desc = `${args[0]}\nAPI may just be down.\nIf you cannot connect, please notify Zeal`;
+							desc = `API may just be down.\nIf you cannot connect, please notify Zeal`;
 							status = 'error';
 						}
 				
