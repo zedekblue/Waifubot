@@ -116,8 +116,8 @@ client.on('message', message => {
 						//checks for error in request
 						if(err) {
 							console.log(err);
-							title = '**Error Getting Server Status**';
-							desc = args[0];
+							title = '**Error getting Minecraft server Status**';
+							desc = '';
 							staus = 'error';
 						}
 				
@@ -126,25 +126,25 @@ client.on('message', message => {
 							body = JSON.parse(body);
 							if (body.players.online) {
 								//people are online and playing
-								title = 'Server is online';
+								title = 'Minecraft server is online';
 								desc = `**${body.players.online}/${body.players.max}**`;
-								onlinePlayers = body.players.list;
+								onlinePlayers = body.players.list.join('\n');
 								status = 'players';
 							} else if (body.players.max === null) {
 								//parse worked, but players is empty
 								title = 'Loading...';
-								desc = 'Server is booting up'
+								desc = 'Minecraft server is booting up'
 								status = 'error';
 							} else {
 								//nobody is online
-								title = 'Server is online';
+								title = 'Minecraft server is online';
 								desc = `**0/${body.players.max}**`;
 								status = 'empty';
 							}
 						}
 						catch (e) {
 							//could not parse
-							title = '**Server is offline**';
+							title = '**Minecraft server is offline**';
 							desc = `API may just be down.\nIf you cannot connect, please notify Zeal`;
 							status = 'error';
 						}
@@ -183,9 +183,10 @@ client.on('message', message => {
 							//people are online and playing
 							try {
 								const newEmbed = new Discord.MessageEmbed()
+									.setAuthor(`${args[0]}`)
 									.setTitle(title)
 									.setColor(0x00FF0F)
-									.setDescription(`${args[0]}\n${desc}\n${onlinePlayers}`)
+									.setDescription(`${desc}\n${onlinePlayers}`)
 									.setFooter(`Last Updated ${today} UTC`);
 								embd.edit(newEmbed).catch(console.log);
 							} catch (e) {
@@ -202,9 +203,10 @@ client.on('message', message => {
 							//nobody is online
 							try {
 								const newEmbed = new Discord.MessageEmbed()
+									.setAuthor(`${args[0]}`)
 									.setTitle(title)
 									.setColor(0xFF9900)
-									.setDescription(`${args[0]}\n${desc}`)
+									.setDescription(`${desc}`)
 									.setFooter(`Last Updated ${today} UTC`);
 								embd.edit(newEmbed).catch(console.log);
 							} catch (e) {
@@ -221,9 +223,10 @@ client.on('message', message => {
 							//any errors
 							try {
 								const newEmbed = new Discord.MessageEmbed()
+									.setAuthor(`${args[0]}`)
 									.setTitle(title)
 									.setColor(0xFF0000)
-									.setDescription(`${args[0]}\n${desc}`)
+									.setDescription(`${desc}`)
 									.setFooter(`Last Updated ${today} UTC`);
 								embd.edit(newEmbed).catch(console.log);
 							} catch (e) {
@@ -326,8 +329,8 @@ client.on('message', message => {
 								//checks for error in request
 								if(err) {
 									console.log(err);
-									title = '**Error Getting Server Status**';
-									desc = args[0];
+									title = '**Error Getting Minecraft server Status**';
+									desc = '';
 									staus = 'error';
 								}
 						
@@ -336,26 +339,26 @@ client.on('message', message => {
 									body = JSON.parse(body);
 									if (body.players.online) {
 										//people are online and playing
-										title = 'Server is online';
+										title = 'Minecraft server is online';
 										desc = `**${body.players.online}/${body.players.max}**`;
-										onlinePlayers = body.players.list;
+										onlinePlayers = body.players.list.join('\n');
 										status = 'players';
 									} else if (body.players.max === null) {
 										//parse worked, but players is empty
 										title = 'Loading...';
-										desc = 'Server is booting up'
+										desc = 'Minecraft server is booting up'
 										status = 'error';
 									} else {
 										//nobody is online
-										title = 'Server is online';
+										title = 'Minecraft server is online';
 										desc = `**0/${body.players.max}**`;
 										status = 'empty';
 									}
 								}
 								catch (e) {
 									//could not parse
-									title = '**Server is offline**';
-									desc = `${args[0]}\nAPI may just be down.\nIf you cannot connect, please notify Zeal`;
+									title = '**Minecraft server is offline**';
+									desc = `API may just be down.\nIf you cannot connect, please notify Zeal`;
 									status = 'error';
 								}
 						
@@ -394,9 +397,10 @@ client.on('message', message => {
 									//people are online and playing
 									try {
 										const newEmbed = new Discord.MessageEmbed()
+											.setAuthor(`${args[0]}`)
 											.setTitle(title)
 											.setColor(0x00FF0F)
-											.setDescription(`${args[0]}\n${desc}\n${onlinePlayers}`)
+											.setDescription(`${desc}\n${onlinePlayers}`)
 											.setFooter(`Last Updated ${today} UTC`);
 										embd.edit(newEmbed).catch(console.log);
 									} catch (e) {
@@ -413,9 +417,10 @@ client.on('message', message => {
 									//nobody is online
 									try {
 										const newEmbed = new Discord.MessageEmbed()
+											.setAuthor(`${args[0]}`)
 											.setTitle(title)
 											.setColor(0xFF9900)
-											.setDescription(`${args[0]}\n${desc}`)
+											.setDescription(`${desc}`)
 											.setFooter(`Last Updated ${today} UTC`);
 										embd.edit(newEmbed).catch(console.log);
 									} catch (e) {
@@ -432,9 +437,10 @@ client.on('message', message => {
 									//any errors
 									try {
 										const newEmbed = new Discord.MessageEmbed()
+											.setAuthor(`${args[0]}`)
 											.setTitle(title)
 											.setColor(0xFF0000)
-											.setDescription(`${args[0]}\n${desc}`)
+											.setDescription(`${desc}`)
 											.setFooter(`Last Updated ${today} UTC`);
 										embd.edit(newEmbed).catch(console.log);
 									} catch (e) {
@@ -498,9 +504,9 @@ client.on('message', message => {
 		if (args[0] != 'serverMaint' && args[0] != 'botMaint') {
 			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>\n**Please provide a valid reason**`);
 		} else if (args[0] === 'serverMaint') {
-			maintReason = 'Ongoing Server Maintenance'
+			maintReason = 'Ongoing Minecraft server maintenance'
 		} else if (args[0] === 'botMaint') {
-			maintReason = 'Ongoing Bot Maintenance'
+			maintReason = 'Ongoing bot maintenance'
 		}
 
 		maintOrKill = true;
@@ -570,17 +576,24 @@ client.on('message', message => {
 		
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel>\nRestricts bot to only read commands posted in the provided channel`);
+			return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel`);
 			// message.guild.id > serverID
 			// args > channelID
 		} 
 		
+		
 		//verifies it is a valid channel id
-		const matches = args[0].match(/^<#!?(\d+)>$/);
-		if (!matches) {
-			return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel>\nRestricts bot to only read commands posted in the provided channel\n**Please mention a valid channel**`);
+		const matches = '0';
+		if (args[0] === 'clear') {
+			matches = '0';
 		} else {
+			matches = args[0].match(/^<#!?(\d+)>$/);
+			if (!matches) {
+				return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel\n**Please mention a valid channel**`);
+			} else {
+			}
 		}
+		
 
 		//creates the json element
 		var restrictInfoToJson = {'serverID' : message.guild.id , 'channelID' : matches[1]};
