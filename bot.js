@@ -22,6 +22,7 @@ var keepLooping = true;
 var maintOrKill = false;
 var maintDetails = '';
 var maintReason = '';
+var weDidItReddit = false;
 
 //login
 client.login(auth.token);
@@ -63,13 +64,17 @@ client.on('message', message => {
 		
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>`);
+			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>`).catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 		} 
 		//message.channel.send(`Command name: ${command}\nArguments: ${args}`);
 
 		//verifies the argument is a valid URL
 		if (!validURL(args[0])) {
-			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>\n**Please provide a valid server URL**`);
+			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>\n**Please provide a valid server URL**`).catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 		} 
 
 		//posts the embed, then initializes the edit sequence
@@ -116,7 +121,7 @@ client.on('message', message => {
 						//checks for error in request
 						if(err) {
 							console.log(err);
-							title = '**Error getting Minecraft server Status**';
+							title = '**Error Getting Minecraft server Status**';
 							desc = '';
 							staus = 'error';
 						}
@@ -154,90 +159,119 @@ client.on('message', message => {
 						today = today.getUTCHours() + ":" + (today.getUTCMinutes()<10?'0':'') + today.getUTCMinutes();
 				
 
+
 						if (maintOrKill === true) {
 							//maint
-							try {
-								const newEmbed = new Discord.MessageEmbed()
-									.setTitle(`${maintReason}`)
-									.setColor(0x6600CC)
-									.setDescription(`${maintDetails}`)
-									.setFooter(`Last Updated ${today} UTC`);
-								embd.edit(newEmbed).catch(console.log);
-								if (maintReason === 'botMaint') {
-									keepLooping = false;
-								}
-								console.log(`Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
-							} catch (e) {
-								console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								if (fails > 10) {
-									keepLooping = false;
-									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								}
+							const newEmbed = new Discord.MessageEmbed()
+								.setTitle(`${maintReason}`)
+								.setColor(0x6600CC)
+								.setDescription(`${maintDetails}`)
+								.setFooter(`Last Updated ${today} UTC`);
+							embd.edit(newEmbed).catch(error =>{
 								fails = fails + 1;
 								loops = 0;
+								if (error.httpStatus = 404){
+									if (fails > 10) {
+										keepLooping = false;
+										console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+									}
+								} else if (fails > 10) {
+									keepLooping = false;
+									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+								} else {
+									console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+								}
+							});
+							if (maintReason === 'botMaint') {
+								keepLooping = false;
 							}
+							if (!weDidItReddit){
+								console.log(`Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
+								weDidItReddit = true;
+							}
+								
+
+
 						} else if (title === '' || title === undefined) {
 							//async bs didn't update this yet, skip
 							console.log('Skipping update due to undefined');
+
+
+
 						} else if (status === 'players'){
 							//people are online and playing
-							try {
-								const newEmbed = new Discord.MessageEmbed()
-									.setAuthor(`${args[0]}`)
-									.setTitle(title)
-									.setColor(0x00FF0F)
-									.setDescription(`${desc}\n${onlinePlayers}`)
-									.setFooter(`Last Updated ${today} UTC`);
-								embd.edit(newEmbed).catch(console.log);
-							} catch (e) {
-								console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								if (fails > 10) {
-									keepLooping = false;
-									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								}
+
+							const newEmbed = new Discord.MessageEmbed()
+								.setAuthor(`${args[0]}`)
+								.setTitle(title)
+								.setColor(0x00FF0F)
+								.setDescription(`${desc}\n${onlinePlayers}`)
+								.setFooter(`Last Updated ${today} UTC`);
+							embd.edit(newEmbed).catch(error =>{
 								fails = fails + 1;
 								loops = 0;
-							}
+								if (error.httpStatus = 404){
+									if (fails > 10) {
+										keepLooping = false;
+										console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+									}
+								} else if (fails > 10) {
+									keepLooping = false;
+									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+								} else {
+									console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+								}
+							});
 							
+
+
 						} else if (status === 'empty') {
 							//nobody is online
-							try {
-								const newEmbed = new Discord.MessageEmbed()
-									.setAuthor(`${args[0]}`)
-									.setTitle(title)
-									.setColor(0xFF9900)
-									.setDescription(`${desc}`)
-									.setFooter(`Last Updated ${today} UTC`);
-								embd.edit(newEmbed).catch(console.log);
-							} catch (e) {
-								console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								if (fails > 10) {
-									keepLooping = false;
-									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								}
+							const newEmbed = new Discord.MessageEmbed()
+								.setAuthor(`${args[0]}`)
+								.setTitle(title)
+								.setColor(0xFF9900)
+								.setDescription(`${desc}`)
+								.setFooter(`Last Updated ${today} UTC`);
+							embd.edit(newEmbed).catch(error =>{
 								fails = fails + 1;
 								loops = 0;
-							}
+								if (error.httpStatus = 404){
+									if (fails > 10) {
+										keepLooping = false;
+										console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+									}
+								} else if (fails > 10) {
+									keepLooping = false;
+									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+								} else {
+									console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+								}
+							});
 							
 						} else if (status === 'error') {
 							//any errors
-							try {
-								const newEmbed = new Discord.MessageEmbed()
-									.setAuthor(`${args[0]}`)
-									.setTitle(title)
-									.setColor(0xFF0000)
-									.setDescription(`${desc}`)
-									.setFooter(`Last Updated ${today} UTC`);
-								embd.edit(newEmbed).catch(console.log);
-							} catch (e) {
-								console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								if (fails > 10) {
-									keepLooping = false;
-									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								}
+							const newEmbed = new Discord.MessageEmbed()
+								.setAuthor(`${args[0]}`)
+								.setTitle(title)
+								.setColor(0xFF0000)
+								.setDescription(`${desc}`)
+								.setFooter(`Last Updated ${today} UTC`);
+							embd.edit(newEmbed).catch(error =>{
 								fails = fails + 1;
 								loops = 0;
-							}
+								if (error.httpStatus = 404){
+									if (fails > 10) {
+										keepLooping = false;
+										console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+									}
+								} else if (fails > 10) {
+									keepLooping = false;
+									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+								} else {
+									console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+								}
+							});
 							
 						} 
 						//this is within the request
@@ -277,12 +311,16 @@ client.on('message', message => {
 
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>`);
+			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>`).catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 		} 
 
 		//verifies the argument is a valid URL
 		if (!validURL(args[0])) {
-			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>\n**Please provide a valid server URL**`);
+			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>\n**Please provide a valid server URL**`).catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 		} 
 
 		//changes post destination if specified
@@ -296,7 +334,9 @@ client.on('message', message => {
 
 
 		try {
-			message.channel.send(`Attempting to update embed in channel ${channelToPost} with id ${args[1]}...`)
+			message.channel.send(`Attempting to update embed in channel ${channelToPost} with id ${args[1]}...`).catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 			const newEmbed = new Discord.MessageEmbed()
 				.setTitle('Loading...')
 				.setColor(0xFF0000)
@@ -367,91 +407,122 @@ client.on('message', message => {
 								today = today.getUTCHours() + ":" + (today.getUTCMinutes()<10?'0':'') + today.getUTCMinutes();
 						
 		
+
 								if (maintOrKill === true) {
 									//maint
-									try {
-										const newEmbed = new Discord.MessageEmbed()
-											.setTitle(`${maintReason}`)
-											.setColor(0x6600CC)
-											.setDescription(`${maintDetails}`)
-											.setFooter(`Last Updated ${today} UTC`);
-										embd.edit(newEmbed).catch(console.log);
-										if (maintReason === 'botMaint') {
-											keepLooping = false;
-										}
-										console.log(`Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
-									} catch (e) {
-										console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										if (fails > 10) {
-											keepLooping = false;
-											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										}
+									const newEmbed = new Discord.MessageEmbed()
+										.setTitle(`${maintReason}`)
+										.setColor(0x6600CC)
+										.setDescription(`${maintDetails}`)
+										.setFooter(`Last Updated ${today} UTC`);
+									embd.edit(newEmbed).catch(error =>{
 										fails = fails + 1;
 										loops = 0;
-										
+										if (error.httpStatus = 404){
+											if (fails > 10) {
+												keepLooping = false;
+												console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+											}
+										} else if (fails > 10) {
+											keepLooping = false;
+											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+										} else {
+											console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+										}
+									});
+									if (maintReason === 'botMaint') {
+										keepLooping = false;
 									}
+									if (!weDidItReddit) {
+										console.log(`Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
+										weDidItReddit = true;
+									}
+
+
+
 								} else if (title === '' || title === undefined) {
 									//async bs didn't update this yet, skip
 									console.log('Skipping update due to undefined');
+
+
+
 								} else if (status === 'players'){
 									//people are online and playing
-									try {
-										const newEmbed = new Discord.MessageEmbed()
-											.setAuthor(`${args[0]}`)
-											.setTitle(title)
-											.setColor(0x00FF0F)
-											.setDescription(`${desc}\n${onlinePlayers}`)
-											.setFooter(`Last Updated ${today} UTC`);
-										embd.edit(newEmbed).catch(console.log);
-									} catch (e) {
-										console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										if (fails > 10) {
-											keepLooping = false;
-											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										}
+									const newEmbed = new Discord.MessageEmbed()
+										.setAuthor(`${args[0]}`)
+										.setTitle(title)
+										.setColor(0x00FF0F)
+										.setDescription(`${desc}\n${onlinePlayers}`)
+										.setFooter(`Last Updated ${today} UTC`);
+									embd.edit(newEmbed).catch(error =>{
 										fails = fails + 1;
 										loops = 0;
-									}
+										if (error.httpStatus = 404){
+											if (fails > 10) {
+												keepLooping = false;
+												console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+											}
+										} else if (fails > 10) {
+											keepLooping = false;
+											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+										} else {
+											console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+										}
+									});
 									
+
+
 								} else if (status === 'empty') {
 									//nobody is online
-									try {
-										const newEmbed = new Discord.MessageEmbed()
-											.setAuthor(`${args[0]}`)
-											.setTitle(title)
-											.setColor(0xFF9900)
-											.setDescription(`${desc}`)
-											.setFooter(`Last Updated ${today} UTC`);
-										embd.edit(newEmbed).catch(console.log);
-									} catch (e) {
-										console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										if (fails > 10) {
-											keepLooping = false;
-											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										}
+									const newEmbed = new Discord.MessageEmbed()
+										.setAuthor(`${args[0]}`)
+										.setTitle(title)
+										.setColor(0xFF9900)
+										.setDescription(`${desc}`)
+										.setFooter(`Last Updated ${today} UTC`);
+									embd.edit(newEmbed).catch(error =>{
 										fails = fails + 1;
 										loops = 0;
-									}
+										if (error.httpStatus = 404){
+											if (fails > 10) {
+												keepLooping = false;
+												console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+											}
+										} else if (fails > 10) {
+											keepLooping = false;
+											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+										} else {
+											console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+										}
+									});
 									
+
+
 								} else if (status === 'error') {
 									//any errors
-									try {
-										const newEmbed = new Discord.MessageEmbed()
-											.setAuthor(`${args[0]}`)
-											.setTitle(title)
-											.setColor(0xFF0000)
-											.setDescription(`${desc}`)
-											.setFooter(`Last Updated ${today} UTC`);
-										embd.edit(newEmbed).catch(console.log);
-									} catch (e) {
-										console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										if (fails > 10) {
-											keepLooping = false;
-											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										}
+									const newEmbed = new Discord.MessageEmbed()
+										.setAuthor(`${args[0]}`)
+										.setTitle(title)
+										.setColor(0xFF0000)
+										.setDescription(`${desc}`)
+										.setFooter(`Last Updated ${today} UTC`);
+									embd.edit(newEmbed).catch(error =>{
 										fails = fails + 1;
 										loops = 0;
-									}
+										if (error.httpStatus = 404){
+											if (fails > 10) {
+												keepLooping = false;
+												console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+											}
+										} else if (fails > 10) {
+											keepLooping = false;
+											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+										} else {
+											console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+										}
+									});
+
+
 									
 								} 
 								//this is within the request
@@ -469,8 +540,10 @@ client.on('message', message => {
 			//this is within the try
 		}
 		catch (e) {
-			console.log(e)
-			return message.reply('Error Posting, please try again and report to bot owner if issue persists')
+			console.log(e);
+			return message.reply('Error Posting, please try again and report to bot owner if issue persists').catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 		}
 		//this is within the message check
 	}
@@ -492,27 +565,36 @@ client.on('message', message => {
 
 		//checks owner is running command
 		if (message.author.id != owner.id) {
-			return message.reply('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json')
+			return message.reply('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 		}
 
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>`);
+			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>`).catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 		} 
 
 		//verifies the last argument is a valid reason
 		if (args[0] != 'serverMaint' && args[0] != 'botMaint') {
-			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>\n**Please provide a valid reason**`);
+			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>\n**Please provide a valid reason**`).catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 		} else if (args[0] === 'serverMaint') {
-			maintReason = 'Ongoing Minecraft server maintenance'
+			maintReason = 'Ongoing Minecraft server Maintenance';
 		} else if (args[0] === 'botMaint') {
-			maintReason = 'Ongoing bot maintenance'
+			maintReason = 'Ongoing Bot Maintenance';
 		}
 
 		maintOrKill = true;
+		weDidItReddit = false;
 		maintDetails = args.slice(1).join(' ');
-		message.reply('Maintenance has begun.')
-
+		message.reply('Maintenance has begun.').catch(error => {
+			console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+		});
+		
 
 	}
 
@@ -534,11 +616,15 @@ client.on('message', message => {
 	else if (command === endMaint){
 		//checks owner is running command
 		if (message.author.id != owner.id) {
-			return message.reply('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json')
+			return message.reply('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 		} else {
 			maintOrKill = false;
 			maintDetails = '';
-			message.reply('Maintenance has ended.')
+			message.reply('Maintenance has ended.').catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});;
 		}
 	}
 
@@ -576,7 +662,9 @@ client.on('message', message => {
 		
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel`);
+			return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel`).catch(error => {
+				console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+			});
 			// message.guild.id > serverID
 			// args > channelID
 		} 
@@ -589,7 +677,9 @@ client.on('message', message => {
 		} else {
 			matches = args[0].match(/^<#!?(\d+)>$/);
 			if (!matches) {
-				return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel\n**Please mention a valid channel**`);
+				return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel\n**Please mention a valid channel**`).catch(error => {
+					console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+				});
 			} else {
 			}
 		}
@@ -616,14 +706,18 @@ client.on('message', message => {
 		fs.readFile('users.json', 'utf8', function readFileCallback(err, data){
 			if (err){
 				console.log(err);
-				return message.channel.send('There was an unexpected error. Try again?');
+				return message.channel.send('There was an unexpected error. Try again?').catch(error => {
+					console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+				});
 			} else {
 				json = JSON.stringify(users); 		//convert users back to json
 				//https://nodejs.org/api/fs.html#fs_fs_writefile_file_data_options_callback
 				fs.writeFile('users.json', json, (err) => {
 					if (err) throw err;
 					console.log('Users file has been saved');
-					return message.reply(`Updated the restricted channel to <#${matches[1]}>\nNew commands will only be accepted there.`)
+					return message.reply(`Updated the restricted channel to <#${matches[1]}>\nNew commands will only be accepted there.`).catch(error => {
+						console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+					});
 				}) //write the file
 				
 			}
@@ -647,10 +741,12 @@ client.on('message', message => {
 	//help command
 	if (command === helpCommand) {
 		const embed = new Discord.MessageEmbed()
-		.setTitle('Help')
-		.setColor(0x6600CC)
-		.setDescription(`List of commands:\n ${prefix}${beginPosting} | Creates the status message\n${prefix}${beginPostingEdit} | Edits existing embed and begins updating it\n${prefix}${setRestrictedChannel} | Sets channel for commands to be accepted in\n ${prefix}${beginMaint} | Bot Owner only - begins maint\n${prefix}${endMaint} | Bot Onwer only - ends maint`);
-		message.reply(embed)
+			.setTitle('Help')
+			.setColor(0x6600CC)
+			.setDescription(`List of commands:\n ${prefix}${beginPosting} | Creates the status message\n${prefix}${beginPostingEdit} | Edits existing embed and begins updating it\n${prefix}${setRestrictedChannel} | Sets channel for commands to be accepted in\n ${prefix}${beginMaint} | Bot Owner only - begins maint\n${prefix}${endMaint} | Bot Onwer only - ends maint`);
+		message.reply(embed).catch(error => {
+			console.log(`Unable to respond to message in ${message.channel.name} on server ${message.guild.name}`);
+		});
 	}
 
 
