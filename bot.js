@@ -18,7 +18,6 @@ var setRestrictedChannel = 'setchan';
 var beginPostingEdit = 'emc';
 
 //global variables
-var keepLooping = true;
 var maintOrKill = false;
 var maintDetails = '';
 var maintReason = '';
@@ -97,13 +96,14 @@ client.on('message', message => {
 			//saves discord embed id
 			embdID = embd.id; 
 			console.log(`Embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
-			//keepLooping = true;
+			
 
 			//variables needed to parse/update
 			var url = 'https://api.mcsrvstat.us/2/' + args[0];
 			var {title,desc,status,onlinePlayers} = '';
 			var fails = 0;
 			var loops = 0;
+			var keepLooping = true;
 			
 			
 			//loop until message is deleted
@@ -291,6 +291,8 @@ client.on('message', message => {
 				//don't put anything here, I'm not sure what/when it will execute due to async
 			)
 			//this is within the message check, verification, and embed
+		}).catch(error => {
+			console.log(`Unable to post embed in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 		});
 		//this is within the message check, and within verification for what the message is
 	}
@@ -349,8 +351,14 @@ client.on('message', message => {
 					//saves discord embed id
 					embdID = embd.id; 
 					console.log(`Edited embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
-					keepLooping = true;
+					var keepLooping = true;
 					
+					//variables needed to parse/update
+					var url = 'https://api.mcsrvstat.us/2/' + args[0];
+					var {title,desc,status,onlinePlayers} = '';
+					var fails = 0;
+					var loops = 0;
+					var keepLooping = true;
 					
 					//loop until message is deleted
 					//while (true){
@@ -359,9 +367,6 @@ client.on('message', message => {
 						function actualLoop(next) {
 
 
-							//variables needed to parse/update
-							var url = 'https://api.mcsrvstat.us/2/' + args[0];
-							var {title,desc,status,onlinePlayers} = '';
 						
 							//fetches the json from url
 							request(url, function(err, response, body) {
