@@ -44,13 +44,12 @@ client.on('message', message => {
 	//checks if the user is in the restricted channel
 	for (var i=0 ; i < users.list.length ; i++) {
 		if (users.list[i]['serverID'] == message.guild.id) {
-			if (users.list[i].hasOwnProperty('readChannelID') && users.list[i]['readChannelID'] != message.channel.id && users.list[i]['readChannelID'] != "") return;
+			if (users.list[i].hasOwnProperty('readChannelID') && users.list[i]['readChannelID'] != message.channel.id && users.list[i]['readChannelID'] != "") return;;
 		}
 	}
 
 	//checks if the user is authorized to post
 	//overrides the check if user is admin
-	var temp = ''; //apparently needed because .permissions can't check a json array
 	if (!message.member.hasPermission("ADMINISTRATOR")) {
 		for (var i=0 ; i < users.list.length ; i++) {
 			if (users.list[i]['serverID'] == message.guild.id) {
@@ -850,9 +849,12 @@ client.on('message', message => {
 						setReadChannelID = "";
 					}
 
-					setSendChannelID = users.list[i]['sendChannelID'];
-					setUserRole = users.list[i]['userRole'];
-					setUserPerm = users.list[i]['userPerm'];
+					if(users.list[i].hasOwnProperty['sendChannelID']) {setSendChannelID = users.list[i]['sendChannelID'];}
+					else {setSendChannelID = ""}
+					if(users.list[i].hasOwnProperty['userRole']) {setUserRole = users.list[i]['userRole'];}
+					else {setUserRole = ""}
+					if(users.list[i].hasOwnProperty['userPerm']) {setUserPerm = users.list[i]['userPerm'];}
+					else {setUserPerm = ""}
 					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
 					users.list.splice(i,1,restrictInfoToJson);
 					matchFound = true;
@@ -882,7 +884,8 @@ client.on('message', message => {
 		} else if (args[0] === "sendchannel") {
 			for (var i=0 ; i < users.list.length ; i++) {
 				if (users.list[i]['serverID'] == message.guild.id) {
-					setReadChannelID = users.list[i]['readChannelID'];
+					if(users.list[i].hasOwnProperty['readChannelID']) {setReadChannelID = users.list[i]['readChannelID'];}
+					else {setReadChannelID = ""}
 
 					if (args[1] === "add") {
 						setSendChannelID = matches[1];
@@ -890,8 +893,10 @@ client.on('message', message => {
 						setSendChannelID = "";
 					}
 					
-					setUserRole = users.list[i]['userRole'];
-					setUserPerm = users.list[i]['userPerm'];
+					if(users.list[i].hasOwnProperty['userRole']) {setUserRole = users.list[i]['userRole'];}
+					else {setUserRole = ""}
+					if(users.list[i].hasOwnProperty['userPerm']) {setUserPerm = users.list[i]['userPerm'];}
+					else {setUserPerm = ""}
 					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
 					users.list.splice(i,1,restrictInfoToJson);
 					matchFound = true;
@@ -921,8 +926,10 @@ client.on('message', message => {
 		} else if (args[0] === "role") {
 			for (var i=0 ; i < users.list.length ; i++) {
 				if (users.list[i]['serverID'] == message.guild.id) {
-					setReadChannelID = users.list[i]['readChannelID'];
-					setSendChannelID = users.list[i]['sendChannelID'];
+					if(users.list[i].hasOwnProperty['readChannelID']) {setReadChannelID = users.list[i]['readChannelID'];}
+					else {setReadChannelID = ""}
+					if(users.list[i].hasOwnProperty['sendChannelID']) {setSendChannelID = users.list[i]['sendChannelID'];}
+					else {setSendChannelID = ""}
 
 					if (args[1] === "add") {
 						setUserRole = args[2];
@@ -930,7 +937,8 @@ client.on('message', message => {
 						setUserRole = "";
 					}
 					
-					setUserPerm = users.list[i]['userPerm'];
+					if(users.list[i].hasOwnProperty['userPerm']) {setUserPerm = users.list[i]['userPerm'];}
+					else {setUserPerm = ""}
 					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
 					users.list.splice(i,1,restrictInfoToJson);
 					matchFound = true;
@@ -959,9 +967,12 @@ client.on('message', message => {
 		} else if (args[0] === "perm") {
 			for (var i=0 ; i < users.list.length ; i++) {
 				if (users.list[i]['serverID'] == message.guild.id) {
-					setReadChannelID = users.list[i]['readChannelID'];
-					setSendChannelID = users.list[i]['sendChannelID'];
-					setUserRole = users.list[i]['userRole'];
+					if(users.list[i].hasOwnProperty['readChannelID']) {setReadChannelID = users.list[i]['readChannelID'];}
+					else {setReadChannelID = ""}
+					if(users.list[i].hasOwnProperty['sendChannelID']) {setSendChannelID = users.list[i]['sendChannelID'];}
+					else {setSendChannelID = ""}
+					if(users.list[i].hasOwnProperty['userRole']) {setUserRole = users.list[i]['userRole'];}
+					else {setUserRole = ""}
 
 					if (args[1] === "add") {
 						setUserPerm = args[2];
