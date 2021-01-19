@@ -136,7 +136,7 @@ client.on('message', message => {
 
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
+		don't forget to add it to emc
 
 
 
@@ -1048,7 +1048,12 @@ client.on('message', message => {
 		const embed = new Discord.MessageEmbed()
 			.setTitle('Help')
 			.setColor(0x6600CC)
-			.setDescription(`List of commands:\n ${prefix}${beginPosting} | Creates the status message\n${prefix}${beginPostingEdit} | Edits existing embed and begins updating it\n${prefix}${setRestrictedChannel} | Sets channel for commands to be accepted in\n ${prefix}${beginMaint} | Bot Owner only - begins maint\n${prefix}${endMaint} | Bot Onwer only - ends maint`);
+			.setDescription(`List of commands:
+${prefix}${beginPosting} | Creates the status message
+${prefix}${beginPostingEdit} | Edits existing embed and begins updating it
+${prefix}${setRestrict} | Restricts channels/users/roles/permissions for bot usage
+${prefix}${beginMaint} | Bot Owner only - begins maint
+${prefix}${endMaint} | Bot Onwer only - ends maint`);
 		message.reply(embed).catch(error => {
 			message.react(noReactID).catch(error => {
 				console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
