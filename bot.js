@@ -800,7 +800,6 @@ client.on('message', message => {
 		if (args[1] === 'clear') {
 			matches = '';
 		} else if (args[0] === "readchannel" || args[0] === "sendchannel") {
-			console.log('a')
 			if (args[1] === "add") {
 				matches = args[2].match(/^<#!?(\d+)>$/);
 				if (!matches) {
