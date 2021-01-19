@@ -14,7 +14,7 @@ var beginPosting = 'mc';
 var beginMaint = 'mts';
 var endMaint = 'mte'
 var helpCommand = 'halp';
-var setRestrictedChannel = 'setchan';
+var setRestrict = 'setres';
 var beginPostingEdit = 'emc';
 
 //global variables
@@ -36,6 +36,7 @@ client.on('message', message => {
 
 
 
+
 	//verifies a command was used by real user
 	if (!message.content.startsWith(prefix) || message.author.bot) return;
 
@@ -43,9 +44,39 @@ client.on('message', message => {
 	//checks if the user is in the restricted channel
 	for (var i=0 ; i < users.list.length ; i++) {
 		if (users.list[i]['serverID'] == message.guild.id) {
-			if (users.list[i]['channelID'] != message.channel.id && users.list[i]['channelID'] != 0) return;
+			if (users.list[i].hasOwnProperty('readChannelID') && users.list[i]['readChannelID'] != message.channel.id && users.list[i]['readChannelID'] != "") return;
 		}
 	}
+
+	//checks if the user is authorized to post
+	//overrides the check if user is admin
+	var temp = ''; //apparently needed because .permissions can't check a json array
+	if (!message.member.hasPermission("ADMINISTRATOR")) {
+		for (var i=0 ; i < users.list.length ; i++) {
+			if (users.list[i]['serverID'] == message.guild.id) {
+				if (users.list[i].hasOwnProperty('userPerm') && users.list[i]['userPerm'] != "") { 
+					if (!message.member.hasPermission(users.list[i]['userPerm'])) { //needs to be nested or hasPermission will throw an error if blank
+						message.react(noReactID).catch(error => {
+							console.log(`Unable to react to a FAILED command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+						});
+						return;
+					}
+				} else if (users.list[i].hasOwnProperty('userRole') && users.list[i]['userRole'] != "") {
+					if (!message.member.roles.cache.has(users.list[i]['userRole'])) {
+						message.react(noReactID).catch(error => {
+							console.log(`Unable to react to a FAILED command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+							return;
+						});
+					}
+				}
+			}
+		}
+	}
+	
+
+
+
+
 	
 	//trims off the arguments of the message
 	const args = message.content.slice(prefix.length).trim().split(' ');
@@ -94,6 +125,24 @@ client.on('message', message => {
 			const matches = args[1].match(/^<#!?(\d+)>$/);
 			channelToPost = matches[1];
 		}
+
+
+		//add check for if the channel is allowed to be posted in
+		/*
+
+
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+		*/
 
 		//posts
 		message.guild.channels.cache.get(channelToPost).send(embed).then(embd=>{
@@ -694,52 +743,256 @@ client.on('message', message => {
 
 
 	//command to set the restricted channel
-	else if (command === setRestrictedChannel) {
+	else if (command === setRestrict) {
 		
+
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel`).catch(error => {
+			return message.channel.send(`Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
+**ReadChannel:** Restricts bot to only read commands posted in the provided channel
+**SendChannel:** Restricts bot to only send and edit messages in the provided channel
+**Role:** Restricts only users with this role to run commands
+**Perm:** Restricts only users with this permission to run commands. (Example: MANAGE_EMOJIS)
+**Add:** Replaces the existing restriction. (Bot currently only supports one selection of each, sorry!)
+**Clear:** Removes chosen restriction.`).catch(error => {
 				message.react(noReactID).catch(error => {
 					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
-			// message.guild.id > serverID
-			// args > channelID
 		} 
 		
-		
-		//verifies it is a valid channel id
-		const matches = '0';
-		if (args[0] === 'clear') {
-			matches = '0';
-		} else {
-			matches = args[0].match(/^<#!?(\d+)>$/);
-			if (!matches) {
-				return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel\n**Please mention a valid channel**`).catch(error => {
-					message.react(noReactID).catch(error => {
-						console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
-					});
+
+		//verifies valid selections
+		if (args[0] != "readchannel" && args[0] != "sendchannel" && args[0] != "role" && args[0] != "perm") {
+			return message.channel.send(`Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
+**ReadChannel:** Restricts bot to only read commands posted in the provided channel
+**SendChannel:** Restricts bot to only send and edit messages in the provided channel
+**Role:** Restricts only users with this role to run commands
+**Perm:** Restricts only users with this permission to run commands. (Example: MANAGE_EMOJIS)
+**Add:** Replaces the existing restriction. (Bot currently only supports one selection of each, sorry!)
+**Clear:** Removes chosen restriction.
+**Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
-			} else {
+			});
+		}
+
+		//verifies secondary selections
+		if (args[1] != "add" && args[1] != "clear") {
+			return message.channel.send(`Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
+**ReadChannel:** Restricts bot to only read commands posted in the provided channel
+**SendChannel:** Restricts bot to only send and edit messages in the provided channel
+**Role:** Restricts only users with this role to run commands
+**Perm:** Restricts only users with this permission to run commands. (Example: MANAGE_EMOJIS)
+**Add:** Replaces the existing restriction. (Bot currently only supports one selection of each, sorry!)
+**Clear:** Removes chosen restriction.
+**Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
+			});
+		}
+
+		
+
+		//verifies valid channel id
+		var matches = ["",""];
+		if (args[1] === 'clear') {
+			matches = '';
+		} else if (args[0] === "readchannel" || args[0] === "sendchannel") {
+			console.log('a')
+			if (args[1] === "add") {
+				matches = args[2].match(/^<#!?(\d+)>$/);
+				if (!matches) {
+					return message.channel.send(`Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
+**ReadChannel:** Restricts bot to only read commands posted in the provided channel
+**SendChannel:** Restricts bot to only send and edit messages in the provided channel
+**Role:** Restricts only users with this role to run commands
+**Perm:** Restricts only users with this permission to run commands. (Example: MANAGE_EMOJIS)
+**Add:** Replaces the existing restriction. (Bot currently only supports one selection of each, sorry!)
+**Clear:** Removes chosen restriction.
+**Please mention a valid channel**`).catch(error => {
+						message.react(noReactID).catch(error => {
+							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+						});
+					});
+				}
 			}
 		}
+
+
+		//Add verification for user id and permission
+		/*
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+		*/
+
+
+		//variables needed for editing users.json
+		var {setReadChannelID,setSendChannelID,setUserRole,setUserPerm} = "";
+		var restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":"","sendChannelID":"","userRole":"","userPerm":""};
+		var matchFound = false;
+
+
+
+		//sets readChannel restrction
+		if (args[0] === "readchannel") {
+			for (var i=0 ; i < users.list.length ; i++) {
+				if (users.list[i]['serverID'] == message.guild.id) {
+
+					if (args[1] === "add") {
+						setReadChannelID = matches[1];
+					} else if (args[1] === "clear") {
+						setReadChannelID = "";
+					}
+
+					setSendChannelID = users.list[i]['sendChannelID'];
+					setUserRole = users.list[i]['userRole'];
+					setUserPerm = users.list[i]['userPerm'];
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.splice(i,1,restrictInfoToJson);
+					matchFound = true;
+				} 
+			}
+			if (!matchFound) {
+				if (args[1] === "clear") {
+					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
+						message.react(noReactID).catch(error => {
+							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+						});
+					});
+				} else if (args[1] === "add") {
+					setReadChannelID = matches[1];
+					setSendChannelID = "";
+					setUserRole = "";
+					setUserPerm = "";
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.push(restrictInfoToJson);
+				}
+				
+			}
+
+
+
+		//sets sendChannel restrction
+		} else if (args[0] === "sendchannel") {
+			for (var i=0 ; i < users.list.length ; i++) {
+				if (users.list[i]['serverID'] == message.guild.id) {
+					setReadChannelID = users.list[i]['readChannelID'];
+
+					if (args[1] === "add") {
+						setSendChannelID = matches[1];
+					} else if (args[1] === "clear") {
+						setSendChannelID = "";
+					}
+					
+					setUserRole = users.list[i]['userRole'];
+					setUserPerm = users.list[i]['userPerm'];
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.splice(i,1,restrictInfoToJson);
+					matchFound = true;
+				} 
+			}
+			if (!matchFound) {
+				if (args[1] === "clear") {
+					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
+						message.react(noReactID).catch(error => {
+							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+						});
+					});
+				} else if (args[1] === "add") {
+					setReadChannelID = "";
+					setSendChannelID = matches[1];
+					setUserRole = "";
+					setUserPerm = "";
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.push(restrictInfoToJson);
+				}
+			}
 		
 
-		//creates the json element
-		var restrictInfoToJson = {'serverID' : message.guild.id , 'channelID' : matches[1]};
 
-		//https://stackoverflow.com/questions/10679580/javascript-search-inside-a-json-object
-		//removes the existing user channel if there is one
-		var matchFound = false;
-		for (var i=0 ; i < users.list.length ; i++) {
-			if (users.list[i]['serverID'] == message.guild.id) {
-				users.list.splice(i,1,restrictInfoToJson);
-				matchFound = true;
-			} 
+
+		//sets Role restrction
+		} else if (args[0] === "role") {
+			for (var i=0 ; i < users.list.length ; i++) {
+				if (users.list[i]['serverID'] == message.guild.id) {
+					setReadChannelID = users.list[i]['readChannelID'];
+					setSendChannelID = users.list[i]['sendChannelID'];
+
+					if (args[1] === "add") {
+						setUserRole = args[2];
+					} else if (args[1] === "clear") {
+						setUserRole = "";
+					}
+					
+					setUserPerm = users.list[i]['userPerm'];
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.splice(i,1,restrictInfoToJson);
+					matchFound = true;
+				} 
+			}
+			if (!matchFound) {
+				if (args[1] === "clear") {
+					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
+						message.react(noReactID).catch(error => {
+							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+						});
+					});
+				} else if (args[1] === "add") {
+					setReadChannelID = "";
+					setSendChannelID = "";
+					setUserRole = args[2];
+					setUserPerm = "";
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.push(restrictInfoToJson);
+				}
+			}
+
+
+
+		//sets permission restriction
+		} else if (args[0] === "perm") {
+			for (var i=0 ; i < users.list.length ; i++) {
+				if (users.list[i]['serverID'] == message.guild.id) {
+					setReadChannelID = users.list[i]['readChannelID'];
+					setSendChannelID = users.list[i]['sendChannelID'];
+					setUserRole = users.list[i]['userRole'];
+
+					if (args[1] === "add") {
+						setUserPerm = args[2];
+					} else if (args[1] === "clear") {
+						setUserPerm = "";
+					}
+					
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.splice(i,1,restrictInfoToJson);
+					matchFound = true;
+				} 
+			}
+			if (!matchFound) {
+				if (args[1] === "clear") {
+					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
+						message.react(noReactID).catch(error => {
+							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+						});
+					});
+				} else if (args[1] === "add") {
+					setReadChannelID = "";
+					setSendChannelID = "";
+					setUserRole = "";
+					setUserPerm = args[2];
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.push(restrictInfoToJson);
+				}
+			}
 		}
-		if (!matchFound) {
-			users.list.push(restrictInfoToJson);
-		}
+
+
 
 		//adds the info to the users list
 		//https://stackoverflow.com/questions/36856232/write-add-data-in-json-file-using-node-js
@@ -757,16 +1010,24 @@ client.on('message', message => {
 				fs.writeFile('users.json', json, (err) => {
 					if (err) throw err;
 					console.log('Users file has been saved');
-					return message.reply(`Updated the restricted channel to <#${matches[1]}>\nNew commands will only be accepted there.`).catch(error => {
+
+
+
+					//return message.reply(`Updated the restricted channel to <#${matches[1]}>\nNew commands will only be accepted there.`).catch(error => {
 						message.react(okReactID).catch(error => {
 							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 						});
-					});
+				//	});
 				}) //write the file
 				
 			}
 		});
-		//this is within the restricted channel commands
+
+
+
+
+
+		//this is within the set restriction commands
 	}
 
 
