@@ -18,6 +18,8 @@ var setRestrictedChannel = 'setchan';
 var beginPostingEdit = 'emc';
 
 //global variables
+var okReactID = '✅';
+var noReactID = '❌';
 var maintOrKill = false;
 var maintDetails = '';
 var maintReason = '';
@@ -64,15 +66,18 @@ client.on('message', message => {
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
 			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>`).catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 		} 
-		//message.channel.send(`Command name: ${command}\nArguments: ${args}`);
 
 		//verifies the argument is a valid URL
 		if (!validURL(args[0])) {
 			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>\n**Please provide a valid server URL**`).catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 		} 
 
@@ -93,7 +98,14 @@ client.on('message', message => {
 		//posts
 		message.guild.channels.cache.get(channelToPost).send(embed).then(embd=>{
 
+			//reacts to the message to show it was successful
+			message.react(okReactID).catch(error => {
+				console.log(`Unable to react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			});
+
+
 			//saves discord embed id
+			//not sure if this is necessary but I don't want to risk it changing during all the edits and having to fetch it every single time
 			embdID = embd.id; 
 			console.log(`Embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
 			
@@ -285,7 +297,7 @@ client.on('message', message => {
 					}
 					
 					//loops every minute
-					setTimeout(next, 60000)
+					setTimeout(next, 6000)
 					//this is within the message check, verification, embed, and async while loop
 				}
 				//don't put anything here, I'm not sure what/when it will execute due to async
@@ -314,14 +326,19 @@ client.on('message', message => {
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
 			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>`).catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				message.react(noReactID).catch(error => {
+					console.log(error);
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 		} 
 
 		//verifies the argument is a valid URL
 		if (!validURL(args[0])) {
 			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>\n**Please provide a valid server URL**`).catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 		} 
 
@@ -336,8 +353,8 @@ client.on('message', message => {
 
 
 		try {
-			message.channel.send(`Attempting to update embed in channel ${channelToPost} with id ${args[1]}...`).catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			message.react(okReactID).catch(error => {
+				console.log(`Unable to react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 			});
 			const newEmbed = new Discord.MessageEmbed()
 				.setTitle('Loading...')
@@ -536,7 +553,7 @@ client.on('message', message => {
 
 							//this is within the message check, verification, embed, and async while loop
 							//loops every minute
-							setTimeout(next, 60000)
+							setTimeout(next, 6000)
 						}
 						//don't put anything here, I'm not sure what/when it will execute due to async
 					)
@@ -547,7 +564,9 @@ client.on('message', message => {
 		catch (e) {
 			console.log(e);
 			return message.reply('Error Posting, please try again and report to bot owner if issue persists').catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 		}
 		//this is within the message check
@@ -570,22 +589,28 @@ client.on('message', message => {
 
 		//checks owner is running command
 		if (message.author.id != owner.id) {
-			return message.reply('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			return message.channel.send('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 		}
 
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
 			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>`).catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 		} 
 
 		//verifies the last argument is a valid reason
 		if (args[0] != 'serverMaint' && args[0] != 'botMaint') {
 			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>\n**Please provide a valid reason**`).catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 		} else if (args[0] === 'serverMaint') {
 			maintReason = 'Ongoing Minecraft server Maintenance';
@@ -596,8 +621,10 @@ client.on('message', message => {
 		maintOrKill = true;
 		onlyPostMaintOnce = false;
 		maintDetails = args.slice(1).join(' ');
-		message.reply('Maintenance has begun.').catch(error => {
-			console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+		message.channel.send('Maintenance has begun.').catch(error => {
+			message.react(okReactID).catch(error => {
+				console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			});
 		});
 		
 
@@ -621,14 +648,18 @@ client.on('message', message => {
 	else if (command === endMaint){
 		//checks owner is running command
 		if (message.author.id != owner.id) {
-			return message.reply('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			return message.channel.send('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 		} else {
 			maintOrKill = false;
 			maintDetails = '';
-			message.reply('Maintenance has ended.').catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			message.channel.send('Maintenance has ended.').catch(error => {
+				message.react(okReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});;
 		}
 	}
@@ -668,7 +699,9 @@ client.on('message', message => {
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
 			return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel`).catch(error => {
-				console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				message.react(noReactID).catch(error => {
+					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
 			});
 			// message.guild.id > serverID
 			// args > channelID
@@ -683,7 +716,9 @@ client.on('message', message => {
 			matches = args[0].match(/^<#!?(\d+)>$/);
 			if (!matches) {
 				return message.channel.send(`Syntax: **${prefix}${setRestrictedChannel}** <channel or 'clear'>\nRestricts bot to only read commands posted in the provided channel\n**Please mention a valid channel**`).catch(error => {
-					console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					message.react(noReactID).catch(error => {
+						console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					});
 				});
 			} else {
 			}
@@ -712,7 +747,9 @@ client.on('message', message => {
 			if (err){
 				console.log(err);
 				return message.channel.send('There was an unexpected error. Try again?').catch(error => {
-					console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					message.react(noReactID).catch(error => {
+						console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					});
 				});
 			} else {
 				json = JSON.stringify(users); 		//convert users back to json
@@ -721,7 +758,9 @@ client.on('message', message => {
 					if (err) throw err;
 					console.log('Users file has been saved');
 					return message.reply(`Updated the restricted channel to <#${matches[1]}>\nNew commands will only be accepted there.`).catch(error => {
-						console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+						message.react(okReactID).catch(error => {
+							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+						});
 					});
 				}) //write the file
 				
@@ -750,7 +789,9 @@ client.on('message', message => {
 			.setColor(0x6600CC)
 			.setDescription(`List of commands:\n ${prefix}${beginPosting} | Creates the status message\n${prefix}${beginPostingEdit} | Edits existing embed and begins updating it\n${prefix}${setRestrictedChannel} | Sets channel for commands to be accepted in\n ${prefix}${beginMaint} | Bot Owner only - begins maint\n${prefix}${endMaint} | Bot Onwer only - ends maint`);
 		message.reply(embed).catch(error => {
-			console.log(`Unable to respond to message in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			message.react(noReactID).catch(error => {
+				console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			});
 		});
 	}
 
