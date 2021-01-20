@@ -345,7 +345,7 @@ client.on('message', message => {
 					}
 					
 					//loops every minute
-					setTimeout(next, 6000)
+					setTimeout(next, 60000)
 					//this is within the message check, verification, embed, and async while loop
 				}
 				//don't put anything here, I'm not sure what/when it will execute due to async
@@ -601,7 +601,7 @@ client.on('message', message => {
 
 							//this is within the message check, verification, embed, and async while loop
 							//loops every minute
-							setTimeout(next, 6000)
+							setTimeout(next, 60000)
 						}
 						//don't put anything here, I'm not sure what/when it will execute due to async
 					)
