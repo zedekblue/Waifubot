@@ -14,6 +14,9 @@ create owner.json:
   
 create auth.json:  
 {"token": "your bot token"}  
+  
+create users.json:
+{"list": []}
    
 run bot with:  
 node ./bot.js  
