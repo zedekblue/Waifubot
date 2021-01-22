@@ -3,7 +3,8 @@ const Discord = require('discord.js');
 const client = new Discord.Client();
 const auth = require('./auth.json');
 const users = require('./users.json');
-const owner = require('./owner.json')
+const owner = require('./owner.json');
+const logFile = require('./log.json'); //will this crash if the file doesn't exist?
 const request = require('request');
 const async = require("async");
 const fs = require('fs');
@@ -12,10 +13,11 @@ const fs = require('fs');
 var prefix = '.';
 var beginPosting = 'mc';
 var beginMaint = 'mts';
-var endMaint = 'mte'
+var endMaint = 'mte';
 var helpCommand = 'halp';
 var setRestrict = 'setres';
 var beginPostingEdit = 'emc';
+var refreshUsers = '.reus';
 
 //global variables
 var okReactID = '✅';
@@ -24,11 +26,14 @@ var maintOrKill = false;
 var maintDetails = '';
 var maintReason = '';
 var onlyPostMaintOnce = false;
+var todayUTC = new Date();
+var today = new Date();
 
 //login
 client.login(auth.token);
 client.once('ready', () => {
-	console.log('Bot Online');
+	today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+	console.log(`[${today}] Bot Online`);
 });
 
 //listen for messages
@@ -56,14 +61,16 @@ client.on('message', message => {
 				if (users.list[i].hasOwnProperty('userPerm') && users.list[i]['userPerm'] != "") { 
 					if (!message.member.hasPermission(users.list[i]['userPerm'])) { //needs to be nested or hasPermission will throw an error if blank
 						message.react(noReactID).catch(error => {
-							console.log(`Unable to react to a FAILED command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+							today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+							console.log(`[${today}] Unable to react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 						});
 						return;
 					}
 				} else if (users.list[i].hasOwnProperty('userRole') && users.list[i]['userRole'] != "") {
 					if (!message.member.roles.cache.has(users.list[i]['userRole'])) {
 						message.react(noReactID).catch(error => {
-							console.log(`Unable to react to a FAILED command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+							today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+							console.log(`[${today}] Unable to react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 							return;
 						});
 					}
@@ -97,7 +104,8 @@ client.on('message', message => {
 		if (!args.length) {
 			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>`).catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		} 
@@ -106,7 +114,8 @@ client.on('message', message => {
 		if (!validURL(args[0])) {
 			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>\n**Please provide a valid server URL**`).catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		} 
@@ -145,23 +154,26 @@ client.on('message', message => {
 
 		//posts
 		message.guild.channels.cache.get(channelToPost).send(embed).then(embd=>{
+			today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
 
-			//reacts to the message to show it was successful
+			//reacts to the command to show it was successful
 			message.react(okReactID).catch(error => {
-				console.log(`Unable to react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				console.log(`[${today}] Unable to react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 			});
 
 
 			//saves discord embed id
 			//not sure if this is necessary but I don't want to risk it changing during all the edits and having to fetch it every single time
 			embdID = embd.id; 
-			console.log(`Embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
+			
+			console.log(`[${today}] Embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
 			
 
 			//variables needed to parse/update
 			var url = 'https://api.mcsrvstat.us/2/' + args[0];
 			var {title,desc,status,onlinePlayers} = '';
 			var fails = 0;
+			var apiFails = 0;
 			var loops = 0;
 			var keepLooping = true;
 			
@@ -177,46 +189,56 @@ client.on('message', message => {
 				
 					//fetches the json from url
 					request(url, function(err, response, body) {
+
+
+						//gets utc and local time
+						todayUTC = today.getUTCHours() + ":" + (today.getUTCMinutes()<10?'0':'') + today.getUTCMinutes();
+						today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
 				
+
 						//checks for error in request
 						if(err) {
-							console.log(`Api error getting status for ${args[0]}`);
+							apiFails = apiFails + 1;
+						}
+				
+
+						//parses the request
+						if (apiFails > 10) {
+							console.log(`[${today}] Api error getting status for ${args[0]}`);
 							title = '**Error Getting Minecraft server Status**';
 							desc = '';
 							staus = 'error';
-						}
-				
-						//parses the request
-						try{
-							body = JSON.parse(body);
-							if (body.players.online) {
-								//people are online and playing
-								title = 'Minecraft server is online';
-								desc = `**${body.players.online}/${body.players.max}**`;
-								onlinePlayers = body.players.list.join('\n');
-								status = 'players';
-							} else if (body.players.max === null) {
-								//parse worked, but players is empty
-								title = 'Loading...';
-								desc = 'Minecraft server is booting up'
+						} else {
+							try{
+								body = JSON.parse(body);
+								if (body.players.online) {
+									//people are online and playing
+									title = 'Minecraft server is online';
+									desc = `**${body.players.online}/${body.players.max}**`;
+									onlinePlayers = body.players.list.join('\n');
+									status = 'players';
+								} else if (body.players.max === null) {
+									//parse worked, but players is empty
+									title = 'Loading...';
+									desc = 'Minecraft server is booting up'
+									status = 'error';
+								} else {
+									//nobody is online
+									title = 'Minecraft server is online';
+									desc = `**0/${body.players.max}**`;
+									status = 'empty';
+								}
+							}
+							catch (e) {
+								//could not parse
+								title = '**Minecraft server is offline**';
+								desc = `API may just be down.\nIf you cannot connect, please notify Zeal`;
 								status = 'error';
-							} else {
-								//nobody is online
-								title = 'Minecraft server is online';
-								desc = `**0/${body.players.max}**`;
-								status = 'empty';
 							}
 						}
-						catch (e) {
-							//could not parse
-							title = '**Minecraft server is offline**';
-							desc = `API may just be down.\nIf you cannot connect, please notify Zeal`;
-							status = 'error';
-						}
+						
 				
-						//gets utc time
-						var today = new Date();
-						today = today.getUTCHours() + ":" + (today.getUTCMinutes()<10?'0':'') + today.getUTCMinutes();
+						
 				
 
 
@@ -226,60 +248,60 @@ client.on('message', message => {
 								.setTitle(`${maintReason}`)
 								.setColor(0x6600CC)
 								.setDescription(`${maintDetails}`)
-								.setFooter(`Last Updated ${today} UTC`);
+								.setFooter(`Last Updated ${todayUTC} UTC`);
 							embd.edit(newEmbed).catch(error =>{
 								fails = fails + 1;
 								loops = 0;
 								if (error.httpStatus = 404){
 									if (fails > 10) {
 										keepLooping = false;
-										console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+										console.log(`[${today}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 									}
 								} else if (fails > 10) {
 									keepLooping = false;
-									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+									console.log(`[${today}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 								} else {
-									console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+									console.log(`[${today}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
 								}
 							});
 							if (maintReason === 'botMaint') {
 								keepLooping = false;
 							}
 							if (!onlyPostMaintOnce){
-								console.log(`Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
+								console.log(`[${today}] Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
 								onlyPostMaintOnce = true;
 							}
 								
 
 
 						} else if (title === '' || title === undefined) {
-							//async bs didn't update this yet, skip
-							console.log('Skipping update due to undefined');
+							//async bs didn't update yet, skip
+							console.log(`[${today}] Skipping update due to undefined`);
 
 
 
 						} else if (status === 'players'){
 							//people are online and playing
-
+							apiFails = 0;
 							const newEmbed = new Discord.MessageEmbed()
 								.setAuthor(`${args[0]}`)
 								.setTitle(title)
 								.setColor(0x00FF0F)
 								.setDescription(`${desc}\n${onlinePlayers}`)
-								.setFooter(`Last Updated ${today} UTC`);
+								.setFooter(`Last Updated ${todayUTC} UTC`);
 							embd.edit(newEmbed).catch(error =>{
 								fails = fails + 1;
 								loops = 0;
 								if (error.httpStatus = 404){
 									if (fails > 10) {
 										keepLooping = false;
-										console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+										console.log(`[${today}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 									}
 								} else if (fails > 10) {
 									keepLooping = false;
-									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+									console.log(`[${today}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 								} else {
-									console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+									console.log(`[${today}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
 								}
 							});
 							
@@ -287,25 +309,26 @@ client.on('message', message => {
 
 						} else if (status === 'empty') {
 							//nobody is online
+							apiFails = 0;
 							const newEmbed = new Discord.MessageEmbed()
 								.setAuthor(`${args[0]}`)
 								.setTitle(title)
 								.setColor(0xFF9900)
 								.setDescription(`${desc}`)
-								.setFooter(`Last Updated ${today} UTC`);
+								.setFooter(`Last Updated ${todayUTC} UTC`);
 							embd.edit(newEmbed).catch(error =>{
 								fails = fails + 1;
 								loops = 0;
 								if (error.httpStatus = 404){
 									if (fails > 10) {
 										keepLooping = false;
-										console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+										console.log(`[${today}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 									}
 								} else if (fails > 10) {
 									keepLooping = false;
-									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+									console.log(`[${today}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 								} else {
-									console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+									console.log(`[${today}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
 								}
 							});
 							
@@ -316,20 +339,20 @@ client.on('message', message => {
 								.setTitle(title)
 								.setColor(0xFF0000)
 								.setDescription(`${desc}`)
-								.setFooter(`Last Updated ${today} UTC`);
+								.setFooter(`Last Updated ${todayUTC} UTC`);
 							embd.edit(newEmbed).catch(error =>{
 								fails = fails + 1;
 								loops = 0;
 								if (error.httpStatus = 404){
 									if (fails > 10) {
 										keepLooping = false;
-										console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+										console.log(`[${today}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 									}
 								} else if (fails > 10) {
 									keepLooping = false;
-									console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+									console.log(`[${today}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 								} else {
-									console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+									console.log(`[${today}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
 								}
 							});
 							
@@ -352,7 +375,13 @@ client.on('message', message => {
 			)
 			//this is within the message check, verification, and embed
 		}).catch(error => {
-			console.log(`Unable to post embed in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			//console.log(e);
+			return message.reply('Error Posting, please try again and report to bot owner if issue persists').catch(error => {
+				message.react(noReactID).catch(error => {
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
+			});
 		});
 		//this is within the message check, and within verification for what the message is
 	}
@@ -369,14 +398,14 @@ client.on('message', message => {
 
 	//start updating an embed with msg id
 	else if (command === beginPostingEdit){
-
+		
 
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
 			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>`).catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(error);
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		} 
@@ -385,7 +414,8 @@ client.on('message', message => {
 		if (!validURL(args[0])) {
 			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>\n**Please provide a valid server URL**`).catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		} 
@@ -401,9 +431,6 @@ client.on('message', message => {
 
 
 		try {
-			message.react(okReactID).catch(error => {
-				console.log(`Unable to react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
-			});
 			const newEmbed = new Discord.MessageEmbed()
 				.setTitle('Loading...')
 				.setColor(0xFF0000)
@@ -412,10 +439,16 @@ client.on('message', message => {
 			message.guild.channels.cache.get(channelToPost).messages.fetch({around: args[1], limit: 1}).then(msg => {
 				const fetchedMsg = msg.first();
 				fetchedMsg.edit(newEmbed).then(embd => {
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+
+					//reacts to the command to show it was successful
+					message.react(okReactID).catch(error => {
+						console.log(`[${today}] Unable to react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					});
 
 					//saves discord embed id
 					embdID = embd.id; 
-					console.log(`Edited embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
+					console.log(`[${today}] Edited embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
 					var keepLooping = true;
 					
 					//variables needed to parse/update
@@ -436,45 +469,51 @@ client.on('message', message => {
 							//fetches the json from url
 							request(url, function(err, response, body) {
 						
+								//gets utc and local time
+								todayUTC = today.getUTCHours() + ":" + (today.getUTCMinutes()<10?'0':'') + today.getUTCMinutes();
+								today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+						
+
 								//checks for error in request
 								if(err) {
-									console.log(`Api error getting status for ${args[0]}`);
+									apiFails = apiFails + 1;
+								}
+						
+
+								//parses the request
+								if (apiFails > 10) {
+									console.log(`[${today}] Api error getting status for ${args[0]}`);
 									title = '**Error Getting Minecraft server Status**';
 									desc = '';
 									staus = 'error';
-								}
-						
-								//parses the request
-								try{
-									body = JSON.parse(body);
-									if (body.players.online) {
-										//people are online and playing
-										title = 'Minecraft server is online';
-										desc = `**${body.players.online}/${body.players.max}**`;
-										onlinePlayers = body.players.list.join('\n');
-										status = 'players';
-									} else if (body.players.max === null) {
-										//parse worked, but players is empty
-										title = 'Loading...';
-										desc = 'Minecraft server is booting up'
+								} else {
+									try{
+										body = JSON.parse(body);
+										if (body.players.online) {
+											//people are online and playing
+											title = 'Minecraft server is online';
+											desc = `**${body.players.online}/${body.players.max}**`;
+											onlinePlayers = body.players.list.join('\n');
+											status = 'players';
+										} else if (body.players.max === null) {
+											//parse worked, but players is empty
+											title = 'Loading...';
+											desc = 'Minecraft server is booting up'
+											status = 'error';
+										} else {
+											//nobody is online
+											title = 'Minecraft server is online';
+											desc = `**0/${body.players.max}**`;
+											status = 'empty';
+										}
+									}
+									catch (e) {
+										//could not parse
+										title = '**Minecraft server is offline**';
+										desc = `API may just be down.\nIf you cannot connect, please notify Zeal`;
 										status = 'error';
-									} else {
-										//nobody is online
-										title = 'Minecraft server is online';
-										desc = `**0/${body.players.max}**`;
-										status = 'empty';
 									}
 								}
-								catch (e) {
-									//could not parse
-									title = '**Minecraft server is offline**';
-									desc = `API may just be down.\nIf you cannot connect, please notify Zeal`;
-									status = 'error';
-								}
-						
-								//gets utc time
-								var today = new Date();
-								today = today.getUTCHours() + ":" + (today.getUTCMinutes()<10?'0':'') + today.getUTCMinutes();
 						
 		
 
@@ -484,27 +523,27 @@ client.on('message', message => {
 										.setTitle(`${maintReason}`)
 										.setColor(0x6600CC)
 										.setDescription(`${maintDetails}`)
-										.setFooter(`Last Updated ${today} UTC`);
+										.setFooter(`Last Updated ${todayUTC} UTC`);
 									embd.edit(newEmbed).catch(error =>{
 										fails = fails + 1;
 										loops = 0;
 										if (error.httpStatus = 404){
 											if (fails > 10) {
 												keepLooping = false;
-												console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+												console.log(`[${today}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 											}
 										} else if (fails > 10) {
 											keepLooping = false;
-											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+											console.log(`[${today}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 										} else {
-											console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+											console.log(`[${today}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
 										}
 									});
 									if (maintReason === 'botMaint') {
 										keepLooping = false;
 									}
 									if (!onlyPostMaintOnce) {
-										console.log(`Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
+										console.log(`[${today}] Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
 										onlyPostMaintOnce = true;
 									}
 
@@ -512,7 +551,7 @@ client.on('message', message => {
 
 								} else if (title === '' || title === undefined) {
 									//async bs didn't update this yet, skip
-									console.log('Skipping update due to undefined');
+									console.log(`[${today}] Skipping update due to undefined`);
 
 
 
@@ -523,20 +562,20 @@ client.on('message', message => {
 										.setTitle(title)
 										.setColor(0x00FF0F)
 										.setDescription(`${desc}\n${onlinePlayers}`)
-										.setFooter(`Last Updated ${today} UTC`);
+										.setFooter(`Last Updated ${todayUTC} UTC`);
 									embd.edit(newEmbed).catch(error =>{
 										fails = fails + 1;
 										loops = 0;
 										if (error.httpStatus = 404){
 											if (fails > 10) {
 												keepLooping = false;
-												console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+												console.log(`[${today}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 											}
 										} else if (fails > 10) {
 											keepLooping = false;
-											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+											console.log(`[${today}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 										} else {
-											console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+											console.log(`[${today}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
 										}
 									});
 									
@@ -549,20 +588,20 @@ client.on('message', message => {
 										.setTitle(title)
 										.setColor(0xFF9900)
 										.setDescription(`${desc}`)
-										.setFooter(`Last Updated ${today} UTC`);
+										.setFooter(`Last Updated ${todayUTC} UTC`);
 									embd.edit(newEmbed).catch(error =>{
 										fails = fails + 1;
 										loops = 0;
 										if (error.httpStatus = 404){
 											if (fails > 10) {
 												keepLooping = false;
-												console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+												console.log(`[${today}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 											}
 										} else if (fails > 10) {
 											keepLooping = false;
-											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+											console.log(`[${today}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 										} else {
-											console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+											console.log(`[${today}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
 										}
 									});
 									
@@ -575,20 +614,20 @@ client.on('message', message => {
 										.setTitle(title)
 										.setColor(0xFF0000)
 										.setDescription(`${desc}`)
-										.setFooter(`Last Updated ${today} UTC`);
+										.setFooter(`Last Updated ${todayUTC} UTC`);
 									embd.edit(newEmbed).catch(error =>{
 										fails = fails + 1;
 										loops = 0;
 										if (error.httpStatus = 404){
 											if (fails > 10) {
 												keepLooping = false;
-												console.log(`Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+												console.log(`[${today}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 											}
 										} else if (fails > 10) {
 											keepLooping = false;
-											console.log(`Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
+											console.log(`[${today}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
 										} else {
-											console.log(`Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
+											console.log(`[${today}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
 										}
 									});
 
@@ -610,10 +649,11 @@ client.on('message', message => {
 			//this is within the try
 		}
 		catch (e) {
-			console.log(e);
+			//console.log(e);
 			return message.reply('Error Posting, please try again and report to bot owner if issue persists').catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		}
@@ -639,7 +679,8 @@ client.on('message', message => {
 		if (message.author.id != owner.id) {
 			return message.channel.send('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		}
@@ -648,7 +689,8 @@ client.on('message', message => {
 		if (!args.length) {
 			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>`).catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		} 
@@ -657,7 +699,8 @@ client.on('message', message => {
 		if (args[0] != 'serverMaint' && args[0] != 'botMaint') {
 			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>\n**Please provide a valid reason**`).catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		} else if (args[0] === 'serverMaint') {
@@ -671,7 +714,8 @@ client.on('message', message => {
 		maintDetails = args.slice(1).join(' ');
 		message.channel.send('Maintenance has begun.').catch(error => {
 			message.react(okReactID).catch(error => {
-				console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+				console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 			});
 		});
 		
@@ -698,7 +742,8 @@ client.on('message', message => {
 		if (message.author.id != owner.id) {
 			return message.channel.send('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		} else {
@@ -706,11 +751,41 @@ client.on('message', message => {
 			maintDetails = '';
 			message.channel.send('Maintenance has ended.').catch(error => {
 				message.react(okReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
-			});;
+			});
 		}
 	}
+
+
+
+
+
+
+
+
+	//refresh json
+	else if (command === refreshUsers) {
+		try {
+			users = require('./users.json');
+			message.react(okReactID).catch(error => {
+				today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+				console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+			});
+		} catch (e) {
+			message.channel.send('An unexpected error occured, please try again and report to bot owner if issue persists.').catch(error => {
+				message.react(noReactID).catch(error => {
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				});
+			});
+		}
+	}
+
+
+
+
 
 
 
@@ -755,7 +830,8 @@ client.on('message', message => {
 **Add:** Replaces the existing restriction. (Bot currently only supports one selection of each, sorry!)
 **Clear:** Removes chosen restriction.`).catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		} 
@@ -772,7 +848,8 @@ client.on('message', message => {
 **Clear:** Removes chosen restriction.
 **Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		}
@@ -788,7 +865,8 @@ client.on('message', message => {
 **Clear:** Removes chosen restriction.
 **Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
 				message.react(noReactID).catch(error => {
-					console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+					today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+					console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 				});
 			});
 		}
@@ -812,7 +890,8 @@ client.on('message', message => {
 **Clear:** Removes chosen restriction.
 **Please mention a valid channel**`).catch(error => {
 						message.react(noReactID).catch(error => {
-							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+							today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+							console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 						});
 					});
 				}
@@ -863,7 +942,8 @@ client.on('message', message => {
 				if (args[1] === "clear") {
 					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
 						message.react(noReactID).catch(error => {
-							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+							today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+							console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 						});
 					});
 				} else if (args[1] === "add") {
@@ -905,7 +985,8 @@ client.on('message', message => {
 				if (args[1] === "clear") {
 					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
 						message.react(noReactID).catch(error => {
-							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+							today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+							console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 						});
 					});
 				} else if (args[1] === "add") {
@@ -947,7 +1028,8 @@ client.on('message', message => {
 				if (args[1] === "clear") {
 					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
 						message.react(noReactID).catch(error => {
-							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+							today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+							console.log(`[${today}] Unable to respond or react to a failed command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 						});
 					});
 				} else if (args[1] === "add") {
@@ -988,7 +1070,8 @@ client.on('message', message => {
 				if (args[1] === "clear") {
 					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
 						message.react(noReactID).catch(error => {
-							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+							today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+							console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 						});
 					});
 				} else if (args[1] === "add") {
@@ -1008,27 +1091,29 @@ client.on('message', message => {
 		//https://stackoverflow.com/questions/36856232/write-add-data-in-json-file-using-node-js
 		fs.readFile('users.json', 'utf8', function readFileCallback(err, data){
 			if (err){
-				console.log(err);
+				today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+				console.log(`[${today}] Error saving users file!`);
 				return message.channel.send('There was an unexpected error. Try again?').catch(error => {
 					message.react(noReactID).catch(error => {
 						console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 					});
 				});
 			} else {
-				json = JSON.stringify(users); 		//convert users back to json
+				today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+				json = JSON.stringify(users, null, 2); 		//convert users back to json
 				//https://nodejs.org/api/fs.html#fs_fs_writefile_file_data_options_callback
 				fs.writeFile('users.json', json, (err) => {
 					if (err) throw err;
-					console.log('Users file has been saved');
+					console.log(`[${today}] Users file has been saved`);
 
 
 
 					//return message.reply(`Updated the restricted channel to <#${matches[1]}>\nNew commands will only be accepted there.`).catch(error => {
 						message.react(okReactID).catch(error => {
-							console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+							console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 						});
 				//	});
-				}) //write the file
+				})
 				
 			}
 		});
@@ -1066,7 +1151,8 @@ ${prefix}${beginMaint} | Bot Owner only - begins maint
 ${prefix}${endMaint} | Bot Onwer only - ends maint`);
 		message.reply(embed).catch(error => {
 			message.react(noReactID).catch(error => {
-				console.log(`Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
+				today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+				console.log(`[${today}] Unable to respond or react to a command in \'${message.channel.name}\' on server \'${message.guild.name}\'`);
 			});
 		});
 	}
@@ -1104,4 +1190,18 @@ function validURL(str) {
 //sleep
 function sleep (time) {
 	return new Promise((resolve) => setTimeout(resolve, time));
+}
+
+
+//https://attacomsian.com/blog/nodejs-create-empty-file
+//might need to open it first?
+//try this function out later
+//make sure to log the time and delete it from literally everywhere above
+//https://stackoverflow.com/questions/12899061/creating-a-file-only-if-it-doesnt-exist-in-node-js
+function fileToLog (stuffToLog) {
+	fs.writeFile('log.txt', stuffToLog, { flag: 'wx' }, function (err) {
+		if (err) throw err;
+		today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+		console.log(`[${today}] Error logged to file`);
+	});
 }
