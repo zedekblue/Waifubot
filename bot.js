@@ -4,7 +4,6 @@ const client = new Discord.Client();
 const auth = require('./auth.json');
 const users = require('./users.json');
 const owner = require('./owner.json');
-//const logFile = require('./log.json'); //will this crash if the file doesn't exist?
 const request = require('request');
 const async = require("async");
 const fs = require('fs');
@@ -23,13 +22,16 @@ var helpCommand = 'halp';
 var okReactID = '✅';
 var noReactID = '❌';
 var maintOrKill = false;
-var maintDetails = '';
+var maintServer = '';
 var maintReason = '';
+var maintDetails = '';
+var maintReady = true; //todo
+var loopLength = 6000;
 
 //login
 client.login(auth.token);
 client.once('ready', () => {
-	console.log(`[${theTime('local')}] Bot Online`);
+	addToLog(`[${theTime('local')}] Bot Online`,'',true);
 });
 
 //listen for messages
@@ -90,7 +92,7 @@ client.on('message', message => {
 
 
 
-	
+
 
 
 
@@ -115,12 +117,6 @@ client.on('message', message => {
 			});
 		} 
 
-		//posts the embed, then initializes the edit sequence
-		const embed = new Discord.MessageEmbed()
-		.setTitle('Loading...')
-		.setColor(0xFF0000)
-		.setDescription('Loading...');
-
 		//changes post destination if specified
 		if (!args[1]) {
 			channelToPost = message.channel.id;
@@ -128,6 +124,12 @@ client.on('message', message => {
 			const matches = args[1].match(/^<#!?(\d+)>$/);
 			channelToPost = matches[1];
 		}
+
+		//creates the embed
+		const embed = new Discord.MessageEmbed()
+		.setTitle('Loading...')
+		.setColor(0xFF0000)
+		.setDescription('Loading...');
 
 
 		//add check for if the channel is allowed to be posted in
@@ -154,219 +156,35 @@ client.on('message', message => {
 			message.react(okReactID).catch(error => {
 				cannotRRLog(message.channel.name,message.guild.name);
 			});
-
-
-			//saves discord embed id
-			//not sure if this is necessary but I don't want to risk it changing during all the edits and having to fetch it every single time
-			embdID = embd.id; 
-			
-			console.log(`[${theTime('')}] Embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
+			addToLog(`[${theTime('')}] Embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`,'',true);
 			
 
-			//variables needed to parse/update
-			var url = 'https://api.mcsrvstat.us/2/' + args[0];
-			var {title,desc,status,onlinePlayers} = '';
-			var fails = 0;
-			var apiFails = 0;
-			var loops = 0;
+			//[0] = How many loops have been completed without an error
+			//[1] = How many consecutive non-api errors there have been
+			//[2] = How many consecutive api errors there have been
+			//[3] = If the loop should continue updating
+			//[4] = If the mainenance message has been posted at least once
+			//[5] = The server address
+			var loopInfo = [0,0,0,true,false,`${args[0]}`];
 			var keepLooping = true;
-			var onlyPostMaintOnce = false;
 			
 			
 			//loop until message is deleted
 			//while (true){
 			async.whilst(
-				function testCondition(what) {what(null, keepLooping)},
-				function actualLoop(next) {
+			function testCondition(what) {what(null, keepLooping)},
+			function actualLoop(next) {
 
+				loopInfo = serverUpdate(loopInfo,embd);
+				keepLooping = loopInfo[3];
 
-					
-				
-					//fetches the json from url
-					request(url, function(err, response, body) {
-
-				
-
-						//checks for error in request
-						if(err) {
-							apiFails = apiFails + 1;
-						}
-				
-
-						//parses the request
-						if (apiFails > 10) {
-							console.log(`[${theTime('')}] Api error getting status for ${args[0]}`);
-							title = '**Error Getting Minecraft server Status**';
-							desc = '';
-							staus = 'error';
-						} else {
-							try{
-								body = JSON.parse(body);
-								if (body.players.online) {
-									//people are online and playing
-									title = 'Minecraft server is online';
-									desc = `**${body.players.online}/${body.players.max}**`;
-									onlinePlayers = body.players.list.join('\n');
-									status = 'players';
-								} else if (body.players.max === null) {
-									//parse worked, but players is empty
-									title = 'Loading...';
-									desc = 'Minecraft server is booting up'
-									status = 'error';
-								} else {
-									//nobody is online
-									title = 'Minecraft server is online';
-									desc = `**0/${body.players.max}**`;
-									status = 'empty';
-								}
-							}
-							catch (e) {
-								//could not parse
-								title = '**Minecraft server is offline**';
-								desc = `API may just be down.\nIf you cannot connect, please notify server owner`;
-								status = 'error';
-							}
-						}
-						
-				
-						
-				
-
-
-						if (maintOrKill === true) {
-							//maint
-							const newEmbed = new Discord.MessageEmbed()
-								.setTitle(`${maintReason}`)
-								.setColor(0x6600CC)
-								.setDescription(`${maintDetails}`)
-								.setFooter(`Last Updated ${theTime('UTC')} UTC`);
-							embd.edit(newEmbed).catch(error =>{
-								fails = fails + 1;
-								loops = 0;
-								if (error.httpStatus = 404){
-									if (fails > 10) {
-										keepLooping = false;
-										console.log(`[${theTime('')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-									}
-								} else if (fails > 10) {
-									keepLooping = false;
-									console.log(`[${theTime('')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								} else {
-									console.log(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
-								}
-							});
-							if (maintReason === 'botMaint') {
-								keepLooping = false;
-							}
-							if (!onlyPostMaintOnce){
-								console.log(`[${theTime('')}] Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
-								onlyPostMaintOnce = true;
-							}
-								
-
-
-						} else if (title === '' || title === undefined) {
-							//async bs didn't update yet, skip
-							console.log(`[${theTime('')}] Skipping update due to undefined`);
-
-
-
-						} else if (status === 'players'){
-							//people are online and playing
-							apiFails = 0;
-							const newEmbed = new Discord.MessageEmbed()
-								.setAuthor(`${args[0]}`)
-								.setTitle(title)
-								.setColor(0x00FF0F)
-								.setDescription(`${desc}\n${onlinePlayers}`)
-								.setFooter(`Last Updated ${theTime('UTC')} UTC`);
-							embd.edit(newEmbed).catch(error =>{
-								fails = fails + 1;
-								loops = 0;
-								if (error.httpStatus = 404){
-									if (fails > 10) {
-										keepLooping = false;
-										console.log(`[${theTime('')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-									}
-								} else if (fails > 10) {
-									keepLooping = false;
-									console.log(`[${theTime('')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								} else {
-									console.log(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
-								}
-							});
-							
-
-
-						} else if (status === 'empty') {
-							//nobody is online
-							apiFails = 0;
-							const newEmbed = new Discord.MessageEmbed()
-								.setAuthor(`${args[0]}`)
-								.setTitle(title)
-								.setColor(0xFF9900)
-								.setDescription(`${desc}`)
-								.setFooter(`Last Updated ${theTime('UTC')} UTC`);
-							embd.edit(newEmbed).catch(error =>{
-								fails = fails + 1;
-								loops = 0;
-								if (error.httpStatus = 404){
-									if (fails > 10) {
-										keepLooping = false;
-										console.log(`[${theTime('')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-									}
-								} else if (fails > 10) {
-									keepLooping = false;
-									console.log(`[${theTime('')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								} else {
-									console.log(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
-								}
-							});
-							
-						} else if (status === 'error') {
-							//any errors
-							const newEmbed = new Discord.MessageEmbed()
-								.setAuthor(`${args[0]}`)
-								.setTitle(title)
-								.setColor(0xFF0000)
-								.setDescription(`${desc}`)
-								.setFooter(`Last Updated ${theTime('UTC')} UTC`);
-							embd.edit(newEmbed).catch(error =>{
-								fails = fails + 1;
-								loops = 0;
-								if (error.httpStatus = 404){
-									if (fails > 10) {
-										keepLooping = false;
-										console.log(`[${theTime('')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-									}
-								} else if (fails > 10) {
-									keepLooping = false;
-									console.log(`[${theTime('')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-								} else {
-									console.log(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
-								}
-							});
-							
-						} 
-						//this is within the request
-					});
-
-					//resets fails after 10 successful attempts
-					loops = loops + 1;
-					if (loops > 10) {
-						fails = 0;
-						loops = 0;
-					}
-					
-					//loops every minute
-					setTimeout(next, 60000)
-					//this is within the message check, verification, embed, and async while loop
-				}
-				//don't put anything here, I'm not sure what/when it will execute due to async
-			)
-			//this is within the message check, verification, and embed
+				//loops every minute
+				setTimeout(next, loopLength)
+			}, function (err) {
+				//This will execute when the loop ends
+			});
 		}).catch(error => {
-			//console.log(e);
+			addToLog('.mc Error',error,false);
 			return message.reply('Error Posting, please try again and report to bot owner if issue persists').catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
@@ -432,204 +250,34 @@ client.on('message', message => {
 					message.react(okReactID).catch(error => {
 						cannotRRLog(message.channel.name,message.guild.name);
 					});
+					addToLog(`[${theTime('')}] Edited embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`,'',true);
 
-					//saves discord embed id
-					embdID = embd.id; 
-					console.log(`[${theTime('')}] Edited embed posted in channel \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
+					//[0] = How many loops have been completed without an error
+					//[1] = How many consecutive non-api errors there have been
+					//[2] = How many consecutive api errors there have been
+					//[3] = If the loop should continue updating
+					//[4] = If the mainenance message has been posted at least once
+					//[5] = The server address
+					var loopInfo = [0,0,0,true,false,`${args[0]}`];
 					var keepLooping = true;
 					
-					//variables needed to parse/update
-					var url = 'https://api.mcsrvstat.us/2/' + args[0];
-					var {title,desc,status,onlinePlayers} = '';
-					var fails = 0;
-					var apiFails = 0;
-					var loops = 0;
-					var keepLooping = true;
-					var onlyPostMaintOnce = false;
 					
 					//loop until message is deleted
 					//while (true){
 					async.whilst(
-						function testCondition(what) {what(null, keepLooping)},
-						function actualLoop(next) {
+					function testCondition(what) {what(null, keepLooping)},
+					function actualLoop(next) {
 
+						loopInfo = serverUpdate(loopInfo,embd);
+						keepLooping = loopInfo[3];
 
-						
-							//fetches the json from url
-							request(url, function(err, response, body) {
-						
-
-								//checks for error in request
-								if(err) {
-									apiFails = apiFails + 1;
-								}
-						
-
-								//parses the request
-								if (apiFails > 10) {
-									console.log(`[${theTime('')}] Api error getting status for ${args[0]}`);
-									title = '**Error Getting Minecraft server Status**';
-									desc = '';
-									staus = 'error';
-								} else {
-									try{
-										body = JSON.parse(body);
-										if (body.players.online) {
-											//people are online and playing
-											title = 'Minecraft server is online';
-											desc = `**${body.players.online}/${body.players.max}**`;
-											onlinePlayers = body.players.list.join('\n');
-											status = 'players';
-										} else if (body.players.max === null) {
-											//parse worked, but players is empty
-											title = 'Loading...';
-											desc = 'Minecraft server is booting up'
-											status = 'error';
-										} else {
-											//nobody is online
-											title = 'Minecraft server is online';
-											desc = `**0/${body.players.max}**`;
-											status = 'empty';
-										}
-									}
-									catch (e) {
-										//could not parse
-										title = '**Minecraft server is offline**';
-										desc = `API may just be down.\nIf you cannot connect, please notify Zeal`;
-										status = 'error';
-									}
-								}
-						
-		
-
-								if (maintOrKill === true) {
-									//maint
-									const newEmbed = new Discord.MessageEmbed()
-										.setTitle(`${maintReason}`)
-										.setColor(0x6600CC)
-										.setDescription(`${maintDetails}`)
-										.setFooter(`Last Updated ${theTime('UTC')} UTC`);
-									embd.edit(newEmbed).catch(error =>{
-										fails = fails + 1;
-										loops = 0;
-										if (error.httpStatus = 404){
-											if (fails > 10) {
-												keepLooping = false;
-												console.log(`[${theTime('UTC')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-											}
-										} else if (fails > 10) {
-											keepLooping = false;
-											console.log(`[${theTime('UTC')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										} else {
-											console.log(`[${theTime('UTC')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
-										}
-									});
-									if (maintReason === 'botMaint') {
-										keepLooping = false;
-									}
-									if (!onlyPostMaintOnce) {
-										console.log(`[${theTime('UTC')}] Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`);
-										onlyPostMaintOnce = true;
-									}
-
-
-
-								} else if (title === '' || title === undefined) {
-									//async bs didn't update this yet, skip
-									console.log(`[${theTime('')}] Skipping update due to undefined`);
-
-
-
-								} else if (status === 'players'){
-									//people are online and playing
-									const newEmbed = new Discord.MessageEmbed()
-										.setAuthor(`${args[0]}`)
-										.setTitle(title)
-										.setColor(0x00FF0F)
-										.setDescription(`${desc}\n${onlinePlayers}`)
-										.setFooter(`Last Updated ${theTime('UTC')} UTC`);
-									embd.edit(newEmbed).catch(error =>{
-										fails = fails + 1;
-										loops = 0;
-										if (error.httpStatus = 404){
-											if (fails > 10) {
-												keepLooping = false;
-												console.log(`[${theTime('')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-											}
-										} else if (fails > 10) {
-											keepLooping = false;
-											console.log(`[${theTime('')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										} else {
-											console.log(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
-										}
-									});
-									
-
-
-								} else if (status === 'empty') {
-									//nobody is online
-									const newEmbed = new Discord.MessageEmbed()
-										.setAuthor(`${args[0]}`)
-										.setTitle(title)
-										.setColor(0xFF9900)
-										.setDescription(`${desc}`)
-										.setFooter(`Last Updated ${theTime('UTC')} UTC`);
-									embd.edit(newEmbed).catch(error =>{
-										fails = fails + 1;
-										loops = 0;
-										if (error.httpStatus = 404){
-											if (fails > 10) {
-												keepLooping = false;
-												console.log(`[${theTime('')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-											}
-										} else if (fails > 10) {
-											keepLooping = false;
-											console.log(`[${theTime('')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										} else {
-											console.log(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
-										}
-									});
-									
-
-
-								} else if (status === 'error') {
-									//any errors
-									const newEmbed = new Discord.MessageEmbed()
-										.setAuthor(`${args[0]}`)
-										.setTitle(title)
-										.setColor(0xFF0000)
-										.setDescription(`${desc}`)
-										.setFooter(`Last Updated ${theTime('UTC')} UTC`);
-									embd.edit(newEmbed).catch(error =>{
-										fails = fails + 1;
-										loops = 0;
-										if (error.httpStatus = 404){
-											if (fails > 10) {
-												keepLooping = false;
-												console.log(`[${theTime('')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-											}
-										} else if (fails > 10) {
-											keepLooping = false;
-											console.log(`[${theTime('')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`)
-										} else {
-											console.log(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`)
-										}
-									});
-
-
-									
-								} 
-								//this is within the request
-							});
-
-
-							//this is within the message check, verification, embed, and async while loop
-							//loops every minute
-							setTimeout(next, 60000)
-						}
-						//don't put anything here, I'm not sure what/when it will execute due to async
-					)
+						//loops every minute
+						setTimeout(next, loopLength)
+					}, function (err) {
+						//This will execute when the loop ends
+					});
 				}).catch(error => {
+					addToLog('.emc edit error',error,false);
 					message.reply('Error Posting, please verify your arguments are correct, try again, and report to bot owner if issue persists').catch(error => {
 						message.react(noReactID).catch(error => {
 							cannotRRLog(message.channel.name,message.guild.name);
@@ -637,10 +285,10 @@ client.on('message', message => {
 					});
 				});
 			});
-			//this is within the try
+			//this is within the try to edit post
 		}
 		catch (e) {
-			//console.log(e);
+			addToLog('.emc failed to find message',e,false);
 			return message.reply('Error Posting, please try again and report to bot owner if issue persists').catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
@@ -665,15 +313,6 @@ client.on('message', message => {
 	//Start maintenance
 	else if (command == beginMaint){
 
-		//checks owner is running command
-		if (message.author.id != owner.id) {
-			return message.channel.send('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
-				message.react(noReactID).catch(error => {
-					cannotRRLog(message.channel.name,message.guild.name);
-				});
-			});
-		}
-
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
 			return message.channel.send(howDoIUseThisCommand(beginMaint)).catch(error => {
@@ -683,29 +322,47 @@ client.on('message', message => {
 			});
 		} 
 
-		//verifies the last argument is a valid reason
+		//verifies the first argument is a valid reason
 		if (args[0] != 'serverMaint' && args[0] != 'botMaint') {
 			return message.channel.send(`${howDoIUseThisCommand(beginMaint)}\n**Please provide a valid reason**`).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
 			});
-		} else if (args[0] === 'serverMaint') {
-			maintReason = 'Ongoing Minecraft server Maintenance';
-		} else if (args[0] === 'botMaint') {
-			maintReason = 'Ongoing Bot Maintenance';
 		}
 
+		//checks owner is running command if botMaint is chosen, proceed with normal restrictions for serverMaint
+		if (args[0] === 'botMaint') {
+			if (message.author.id != owner.id) {
+				return message.channel.send('Sorry, only the bot owner can execute this command.\nIf you are running your own instance of waifubot, please add your id to owner.json').catch(error => {
+					message.react(noReactID).catch(error => {
+						cannotRRLog(message.channel.name,message.guild.name);
+					});
+				});
+			}
+		}
+
+		//verifies the second argument is a valid URL if serverMaint
+		//also sets maintDetails depending on which was chosen
+		if (args[0] === 'serverMaint') {
+			if (!validURL(args[1])) {
+				return message.channel.send(`${howDoIUseThisCommand(beginMaint)}\n**Please provide a valid server URL**`).catch(error => {
+					message.react(noReactID).catch(error => {
+						cannotRRLog(message.channel.name,message.guild.name);
+					});
+				});
+			} 
+			maintDetails = args.slice(2).join(' ');
+			maintServer = args[1];
+		} else {maintDetails = args.slice(1).join(' ');}
+
+		maintReason = args[0];
 		maintOrKill = true;
-		onlyPostMaintOnce = false;
-		maintDetails = args.slice(1).join(' ');
 		message.channel.send('Maintenance has begun.').catch(error => {
 			message.react(okReactID).catch(error => {
 				cannotRRLog(message.channel.name,message.guild.name);
 			});
 		});
-		
-
 	}
 
 
@@ -732,13 +389,24 @@ client.on('message', message => {
 				});
 			});
 		} else {
-			maintOrKill = false;
-			maintDetails = '';
-			message.channel.send('Maintenance has ended.').catch(error => {
-				message.react(okReactID).catch(error => {
-					cannotRRLog(message.channel.name,message.guild.name);
+			//checks if confirm argument exists
+			if (args[0] != 'confirm') {
+				return message.channel.send(howDoIUseThisCommand(endMaint)).catch( error => {
+					message.react(noReactID).catch(error => {
+						cannotRRLog(message.channel.name,message.channel.name);
+					});
 				});
-			});
+			//end maint if it does
+			} else if (args[0] === 'confirm') {
+				maintOrKill = false;
+				maintDetails = '';
+				message.channel.send('Maintenance has ended.').catch(error => {
+					message.react(okReactID).catch(error => {
+						cannotRRLog(message.channel.name,message.guild.name);
+					});
+				});
+			}
+			
 		}
 	}
 
@@ -953,7 +621,7 @@ client.on('message', message => {
 		//https://stackoverflow.com/questions/36856232/write-add-data-in-json-file-using-node-js
 		fs.readFile('users.json', 'utf8', function readFileCallback(err, data){
 			if (err){
-				console.log(`[${today}] Error saving users file!`);
+				addToLog(`[${today}] Error saving users file!`,err,true);
 				return message.channel.send('There was an unexpected error. Try again?').catch(error => {
 					message.react(noReactID).catch(error => {
 						cannotRRLog(message.channel.name,message.guild.name);
@@ -964,7 +632,7 @@ client.on('message', message => {
 				//https://nodejs.org/api/fs.html#fs_fs_writefile_file_data_options_callback
 				fs.writeFile('users.json', json, (err) => {
 					if (err) throw err;
-					console.log(`[${theTime('')}] Users file has been saved`);
+					addToLog(`[${theTime('')}] Users file has been saved`,'',true);
 
 					message.react(okReactID).catch(error => {
 						cannotRRLog(message.channel.name,message.guild.name);
@@ -1098,12 +766,13 @@ function howDoIUseThisCommand (whichCommand) {
 **Role:** Restricts only users with this role to run commands
 **Perm:** Restricts only users with this permission to run commands (Example: MANAGE_EMOJIS)
 **Add:** Replaces the existing restriction (Bot currently only supports one selection of each, sorry!)
-**Clear:** Removes chosen restriction`;
+**Clear:** Removes chosen restriction
+You can right click on a channel or role in developer mode to get the numerical ID needed at the end`;
 	} else if (whichCommand === beginMaint) {
-		return `Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>
+		return `Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <server URL if serverMaint> <optional info>
 Changes all bot messages globally to show as under maintenance`;
 	} else if (whichCommand === endMaint) {
-
+		return `Syntax: **${prefix}${endMaint}** <confirm>`;
 	} else if (whichCommand === beginPosting) {
 		return `Syntax: **${prefix}${beginPosting}** <server> <optional channel>
 The main function of this bot: Posts an updating embed showing the status of a minecraft server`;
@@ -1111,22 +780,8 @@ The main function of this bot: Posts an updating embed showing the status of a m
 		return `Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>
 Edits an existing waifubot message and replaces it with the updating server embed`;
 	} else if (whichCommand === refreshUsers) {
-
+		//todo
 	}
-
-
-
-
-
-/*
-var beginPosting = 'mc';
-var beginPostingEdit = 'emc';
-	var setRestrict = 'setres';
-var refreshUsers = 'reus';
-	var beginMaint = 'mts';
-var endMaint = 'mte';
-var helpCommand = 'halp';
-*/
 }
 
 
@@ -1154,7 +809,30 @@ function sleep (time) {
 
 //print 'Unable to respond'
 function cannotRRLog (channel, server) {
-	console.log(`[${theTime('local')}] Unable to respond to a command in \'${channel}\' on server \'${server}\'`);
+	addToLog(`[${theTime('local')}] Unable to respond to a command in \'${channel}\' on server \'${server}\'`,'',true);
+}
+
+
+
+//add to log file
+function addToLog (dataToLog,errorToLog,postToConsole) {
+	if (postToConsole) {
+		console.log(dataToLog);
+	}
+	return true;
+
+	/*
+	//https://attacomsian.com/blog/nodejs-create-empty-file
+	//might need to open it first?
+	//try this function out later
+	//make sure to log the time and delete it from literally everywhere above
+	//https://stackoverflow.com/questions/12899061/creating-a-file-only-if-it-doesnt-exist-in-node-js
+	fs.writeFile('log.txt', stuffToLog, { flag: 'wx' }, function (err) {
+		if (err) throw err;
+		today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
+		console.log(`[${today}] Error logged to file`);
+
+	*/
 }
 
 
@@ -1172,15 +850,126 @@ function theTime (timezone) {
 
 
 
-//https://attacomsian.com/blog/nodejs-create-empty-file
-//might need to open it first?
-//try this function out later
-//make sure to log the time and delete it from literally everywhere above
-//https://stackoverflow.com/questions/12899061/creating-a-file-only-if-it-doesnt-exist-in-node-js
-function fileToLog (stuffToLog) {
-	fs.writeFile('log.txt', stuffToLog, { flag: 'wx' }, function (err) {
-		if (err) throw err;
-		today = today.getHours() + ":" + (today.getMinutes()<10?'0':'') + today.getMinutes();
-		console.log(`[${today}] Error logged to file`);
+
+
+
+
+
+
+
+
+
+
+
+
+//updates the embed
+function serverUpdate (loopInfo,embd) {
+	var {title,color,desc} = '';
+	var url = 'https://api.mcsrvstat.us/2/' + loopInfo[5];
+	//var loopInfo = [0,0,0,true,false,`${args[0]}`];
+	//[0] = How many loops have been completed without an error
+	//[1] = How many consecutive non-api errors there have been
+	//[2] = How many consecutive api errors there have been
+	//[3] = If the loop should continue updating
+	//[4] = If the mainenance message has been posted at least once
+	//[5] = The server address
+					
+
+	//fetches the json from url
+	request(url, function(err, response, body) {
+					
+		//server is offline
+		if(err) {
+			loopInfo[2]++;
+			if (loopInfo[2] > 9) {
+				if (loopInfo[2] === 10) {addToLog(`[${theTime('')}] Api error getting status for ${loopInfo[5]}`,'',true);}
+				title = '**Minecraft server is offline**';
+				color = '0xFF0000';
+				desc = `API may just be down.\nIf you cannot connect, please notify server owner`;
+			} 
+		} else {
+			loopInfo[2] = 0;
+			try {
+				body = JSON.parse(body);
+				//people are online and playing
+				if (body.players.online) {
+					title = 'Minecraft server is online';
+					color = '0x00FF0F';
+					desc = `**${body.players.online}/${body.players.max}**\n${body.players.list.join('\n')}`;
+				//nobody is online
+				} else {
+					title = 'Minecraft server is online';
+					color = '0xFF9900';
+					desc = `**0/${body.players.max}**`;
+				}
+			} catch (e) {
+				loopInfo[2]++;
+				if (loopInfo[2] > 9) {
+					if (loopInfo[2] === 10) {addToLog(`[${theTime('')}] Api error getting status for ${loopInfo[5]}`,'',true);}
+					title = '**Minecraft server is offline**';
+					color = '0xFF0000';
+					desc = `API may just be down.\nIf you cannot connect, please notify server owner`;
+				} 
+			}
+		}
+		if (title === '' || title === undefined) {
+			//async bs didn't update yet, skip
+			title = 'Loading...';
+			color = '0xFF0000';
+			desc = 'Loading...';
+		}
+
+		//if maint, overwrite all that parsing you just did
+		if (maintOrKill) {
+			if (maintReason === 'serverMaint') {
+				//only updates if this is the server in question
+				if (maintServer === loopInfo[5]) {
+					title = 'Ongoing Minecraft server maintenance...';
+					color = '0x6600CC';
+					desc = maintDetails;
+					if (!loopInfo[4]) {
+						addToLog(`[${theTime('')}] Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`,'',true);
+						loopInfo[4] = true;
+					}
+				}
+			} else {
+				title = 'Ongoing bot maintenance...';
+				color = '0x6600CC';
+				desc = maintDetails;
+				loopInfo[3] = false;
+				addToLog(`[${theTime('')}] Maintenance successfully begun in \'${embd.channel.name}\' on server \'${embd.guild.name}\'`,'',true);
+			}
+		} else {
+			//reset maint message if no active maint
+			loopInfo[4] = false; 
+		} 
+
+		//time to update the embed
+		const newEmbed = new Discord.MessageEmbed()
+			.setAuthor(`${loopInfo[5]}`)
+			.setTitle(title)
+			.setColor(color)
+			.setDescription(desc)
+			.setFooter(`Last Updated ${theTime('UTC')} UTC`);
+		embd.edit(newEmbed).catch(error =>{
+			//adds to error count, resets success count
+			loopInfo[2]++;
+			loopInfo[0] = 0;
+			//stops updating when at 10 consecutive failures to edit, if its not a 404 error, log every time.
+			if (loopInfo[2] > 9) {
+				loopInfo[3] = false;
+				if (error.httpStatus = 404) {addToLog(`[${theTime('')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`,'',true);}
+				else {addToLog(`[${theTime('')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`,error,true);}
+			} else if (error.httpStatus != 404) {
+				addToLog(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`,error,true);
+			}
+		});
+
+		//if you've had 10 successful loops, reset fail count
+		loopInfo[0]++;
+		if (loopInfo[0] > 10) {
+			loopInfo[2] = 0;
+		}
 	});
+	return loopInfo;
 }
