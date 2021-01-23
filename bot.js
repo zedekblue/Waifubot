@@ -483,7 +483,7 @@ client.on('message', message => {
 		
 
 		//verifies valid selections
-		if (args[0] != "readchannel" && args[0] != "sendchannel" && args[0] != "role" && args[0] != "perm") {
+		if (args[0] != "readchannel" && args[0] != "sendchannel" && args[0] != "role" && args[0] != "perm" && args[0] != "settings") {
 			return message.channel.send(`${howDoIUseThisCommand(setRestrict)}\n**Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
@@ -492,155 +492,184 @@ client.on('message', message => {
 		}
 
 		//verifies secondary selections
-		if (args[1] != "add" && args[1] != "clear") {
-			return message.channel.send(`${howDoIUseThisCommand(setRestrict)}\n**Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
-				message.react(noReactID).catch(error => {
-					cannotRRLog(message.channel.name,message.guild.name);
-				});
-			});
-		}
+		if (args[0] != "settings") {
 
-		
-
-		//verifies valid channel id
-		var matches = ["",""];
-		if (args[1] === 'clear') {
-			matches = '';
-		} else if (args[0] === "readchannel" || args[0] === "sendchannel") {
-			if (args[1] === "add") {
-				matches = args[2].match(/^<#!?(\d+)>$/);
-				if (!matches) {
-					return message.channel.send(`${howDoIUseThisCommand(setRestrict)}\n**Please mention a valid channel**`).catch(error => {
-						message.react(noReactID).catch(error => {
-							cannotRRLog(message.channel.name,message.guild.name);
-						});
-					});
-				}
-			}
-		}
-
-
-		//Add verification for user id and permission
-		/*
-
-
-		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-		*/
-
-
-		//variables needed for editing users.json
-		var {setReadChannelID,setSendChannelID,setUserRole,setUserPerm} = "";
-		var restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":"","sendChannelID":"","userRole":"","userPerm":""};
-		var matchFound = false;
-
-
-
-
-		//grabs existing data from users list and uses it to add/clear the new data
-		for (var i=0 ; i < users.list.length ; i++) {
-			if (users.list[i]['serverID'] == message.guild.id) {
-
-				//if readchannel is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
-				if (args[0] === "readchannel") {
-					if (args[1] === "add") {
-						setReadChannelID = matches[1];
-					} else if (args[1] === "clear") {
-						setReadChannelID = "";
-					}
-				} else {
-					if(users.list[i].hasOwnProperty['readChannelID']) {setReadChannelID = users.list[i]['readChannelID'];}
-					else {setReadChannelID = ""}
-				}
-
-				//if sendchannel is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
-				if (args[0] === "sendchannel") {
-					if (args[1] === "add") {
-						setSendChannelID = matches[1];
-					} else if (args[1] === "clear") {
-						setSendChannelID = "";
-					}
-				} else {
-					if(users.list[i].hasOwnProperty['sendChannelID']) {setSendChannelID = users.list[i]['sendChannelID'];}
-					else {setSendChannelID = ""}
-				}
-				
-				//if role is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
-				if (args[0] === "role") {
-					if (args[1] === "add") {
-						setUserRole = args[2];
-					} else if (args[1] === "clear") {
-						setUserRole = "";
-					}
-				} else {
-					if(users.list[i].hasOwnProperty['userRole']) {setUserRole = users.list[i]['userRole'];}
-					else {setUserRole = ""}
-				}
-				
-				//if perm is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
-				if (args[0] === "perm") {
-					if (args[1] === "add") {
-						setUserPerm = args[2];
-					} else if (args[1] === "clear") {
-						setUserPerm = "";
-					}
-				} else {
-					if(users.list[i].hasOwnProperty['userPerm']) {setUserPerm = users.list[i]['userPerm'];}
-					else {setUserPerm = ""}
-				}
-
-				
-				//adds all the previously compiled values to a json value
-				restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-				users.list.splice(i,1,restrictInfoToJson);
-				matchFound = true;
-			} 
-		}
-		//if they are trying to clear the value, return an error if none were found, otherwise create an empty json with the new value
-		if (!matchFound) {
-			if (args[1] === "clear") {
-				return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
+			if (args[1] != "add" && args[1] != "clear") {
+				return message.channel.send(`${howDoIUseThisCommand(setRestrict)}\n**Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
 					message.react(noReactID).catch(error => {
 						cannotRRLog(message.channel.name,message.guild.name);
 					});
 				});
-			} else if (args[1] === "add") {
-				setReadChannelID = "";
-				setSendChannelID = "";
-				setUserRole = "";
-				setUserPerm = args[2];
-				restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-				users.list.push(restrictInfoToJson);
 			}
-		}
+			//verifies valid channel id
+			var matches = ["",""];
+			if (args[1] === 'clear') {
+				matches = ["",""];
+			} else if (args[0] === "readchannel" || args[0] === "sendchannel") {
+				if (args[1] === "add") {
+					matches = args[2].match(/^<#!?(\d+)>$/);
+					if (!matches) {
+						return message.channel.send(`${howDoIUseThisCommand(setRestrict)}\n**Please mention a valid channel**`).catch(error => {
+							message.react(noReactID).catch(error => {
+								cannotRRLog(message.channel.name,message.guild.name);
+							});
+						});
+					}
+				}
+			}
+
+
+			//Add verification for user id and permission
+			/*
+
+
+			!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+			*/
+
+
+			//variables needed for editing users.json
+			var {setReadChannelID,setSendChannelID,setUserRole,setUserPerm} = "";
+			var restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":"","sendChannelID":"","userRole":"","userPerm":""};
+			var matchFound = false;
 
 
 
-		//adds the info to the users list
-		//https://stackoverflow.com/questions/36856232/write-add-data-in-json-file-using-node-js
-		fs.readFile('users.json', 'utf8', function readFileCallback(err, data){
-			if (err){
-				addToLog(`[${today}] Error saving users file!`,err,true);
-				return message.channel.send('There was an unexpected error. Try again?').catch(error => {
+
+			//grabs existing data from users list and uses it to add/clear the new data
+			for (var i=0 ; i < users.list.length ; i++) {
+				if (users.list[i]['serverID'] == message.guild.id) {
+
+					//if readchannel is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
+					if (args[0] === "readchannel") {
+						if (args[1] === "add") {
+							setReadChannelID = matches[1];
+						} else if (args[1] === "clear") {
+							setReadChannelID = "";
+						}
+					} else {
+						if(users.list[i].hasOwnProperty['readChannelID']) {setReadChannelID = users.list[i]['readChannelID'];}
+						else {setReadChannelID = ""}
+					}
+
+					//if sendchannel is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
+					if (args[0] === "sendchannel") {
+						if (args[1] === "add") {
+							setSendChannelID = matches[1];
+						} else if (args[1] === "clear") {
+							setSendChannelID = "";
+						}
+					} else {
+						if(users.list[i].hasOwnProperty['sendChannelID']) {setSendChannelID = users.list[i]['sendChannelID'];}
+						else {setSendChannelID = ""}
+					}
+					
+					//if role is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
+					if (args[0] === "role") {
+						if (args[1] === "add") {
+							setUserRole = args[2];
+						} else if (args[1] === "clear") {
+							setUserRole = "";
+						}
+					} else {
+						if(users.list[i].hasOwnProperty['userRole']) {setUserRole = users.list[i]['userRole'];}
+						else {setUserRole = ""}
+					}
+					
+					//if perm is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
+					if (args[0] === "perm") {
+						if (args[1] === "add") {
+							setUserPerm = args[2];
+						} else if (args[1] === "clear") {
+							setUserPerm = "";
+						}
+					} else {
+						if(users.list[i].hasOwnProperty['userPerm']) {setUserPerm = users.list[i]['userPerm'];}
+						else {setUserPerm = ""}
+					}
+
+					
+					//adds all the previously compiled values to a json value
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.splice(i,1,restrictInfoToJson);
+					matchFound = true;
+				} 
+			}
+			//if they are trying to clear the value, return an error if none were found, otherwise create an empty json with the new value
+			if (!matchFound) {
+				if (args[1] === "clear") {
+					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
+						message.react(noReactID).catch(error => {
+							cannotRRLog(message.channel.name,message.guild.name);
+						});
+					});
+				} else if (args[1] === "add") {
+					setReadChannelID = "";
+					setSendChannelID = "";
+					setUserRole = "";
+					setUserPerm = args[2];
+					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+					users.list.push(restrictInfoToJson);
+				}
+			}
+
+
+
+			//adds the info to the users list
+			//https://stackoverflow.com/questions/36856232/write-add-data-in-json-file-using-node-js
+			fs.readFile('users.json', 'utf8', function readFileCallback(err, data){
+				if (err){
+					addToLog(`[${today}] Error saving users file!`,err,true);
+					return message.channel.send('There was an unexpected error. Try again?').catch(error => {
+						message.react(noReactID).catch(error => {
+							cannotRRLog(message.channel.name,message.guild.name);
+						});
+					});
+				} else {
+					json = JSON.stringify(users, null, 2); 		//convert users back to json
+					//https://nodejs.org/api/fs.html#fs_fs_writefile_file_data_options_callback
+					fs.writeFile('users.json', json, (err) => {
+						if (err) throw err;
+						addToLog(`[${theTime('')}] Users file has been saved`,'',true);
+
+						message.react(okReactID).catch(error => {
+							cannotRRLog(message.channel.name,message.guild.name);
+						});
+					})
+					
+				}
+			});
+		} else {
+			var {rci,sci,ur,up} = '';
+			for (var i=0 ; i < users.list.length ; i++) {
+				if (users.list[i]['serverID'] == message.guild.id) {
+					if (users.list[i]["readChannelID"] != '') {rci = `Channels the bot can read commands in: <#${users.list[i]["readChannelID"]}>\n`;}
+					else {rci = ''}
+					if (users.list[i]["sendChannelID"] != '') {sci = `Channels the bot can send messages in: <#${users.list[i]["sendChannelID"]}>\n`;}
+					else {sci = ''}
+					if (users.list[i]["userRole"] != '') {ur = `Roles that can use bot commands: <@&${users.list[i]["userRole"]}>\n`;}
+					else {ur = ''}
+					if (users.list[i]["userPerm"] != '') {up = `Permissions that can use bot commands: ${users.list[i]["userPerm"]}\n`;}
+					else {up = ''}
+				}
+			}
+			if (rci === '' && sci === '' && ur === '' && ur === '') {
+				return message.channel.send(`There are currently no settings for this server`).catch(error => {
 					message.react(noReactID).catch(error => {
 						cannotRRLog(message.channel.name,message.guild.name);
 					});
 				});
 			} else {
-				json = JSON.stringify(users, null, 2); 		//convert users back to json
-				//https://nodejs.org/api/fs.html#fs_fs_writefile_file_data_options_callback
-				fs.writeFile('users.json', json, (err) => {
-					if (err) throw err;
-					addToLog(`[${theTime('')}] Users file has been saved`,'',true);
-
-					message.react(okReactID).catch(error => {
+				return message.channel.send(`${rci}${sci}${ur}${up}`, {"allowedMentions": { "roles" : []}}).catch(error => {
+					message.react(noReactID).catch(error => {
 						cannotRRLog(message.channel.name,message.guild.name);
 					});
-				})
-				
+				});
 			}
-		});
+		}
+
+		
 
 
 
@@ -760,11 +789,12 @@ ${prefix}${endMaint} | Bot Onwer only - ends maint`);
 //gives print values for command usage
 function howDoIUseThisCommand (whichCommand) {
 	if (whichCommand === setRestrict) {
-		return `Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
+		return `Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"/"settings"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
 **ReadChannel:** Restricts bot to only read commands posted in the provided channel
 **SendChannel:** Restricts bot to only send and edit messages in the provided channel
 **Role:** Restricts only users with this role to run commands
 **Perm:** Restricts only users with this permission to run commands (Example: MANAGE_EMOJIS)
+**Settings:** Posts existing restriction settings - following options not required
 **Add:** Replaces the existing restriction (Bot currently only supports one selection of each, sorry!)
 **Clear:** Removes chosen restriction
 You can right click on a channel or role in developer mode to get the numerical ID needed at the end`;
