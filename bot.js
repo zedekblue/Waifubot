@@ -90,13 +90,16 @@ client.on('message', message => {
 
 
 
+	
+
+
 
 	//Command to post the embed & begin updating it
 	if (command === beginPosting) {
 		
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>`).catch(error => {
+			return message.channel.send(howDoIUseThisCommand(beginPosting)).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
@@ -105,7 +108,7 @@ client.on('message', message => {
 
 		//verifies the argument is a valid URL
 		if (!validURL(args[0])) {
-			return message.channel.send(`Syntax: **${prefix}${beginPosting}** <server> <optional channel>\n**Please provide a valid server URL**`).catch(error => {
+			return message.channel.send(`${howDoIUseThisCommand(beginPosting)}\n**Please provide a valid server URL**`).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
@@ -389,7 +392,7 @@ client.on('message', message => {
 
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>`).catch(error => {
+			return message.channel.send(howDoIUseThisCommand(beginPostingEdit)).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
@@ -398,7 +401,7 @@ client.on('message', message => {
 
 		//verifies the argument is a valid URL
 		if (!validURL(args[0])) {
-			return message.channel.send(`Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>\n**Please provide a valid server URL**`).catch(error => {
+			return message.channel.send(`${howDoIUseThisCommand(beginPostingEdit)}\n**Please provide a valid server URL**`).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
@@ -673,7 +676,7 @@ client.on('message', message => {
 
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>`).catch(error => {
+			return message.channel.send(howDoIUseThisCommand(beginMaint)).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
@@ -682,7 +685,7 @@ client.on('message', message => {
 
 		//verifies the last argument is a valid reason
 		if (args[0] != 'serverMaint' && args[0] != 'botMaint') {
-			return message.channel.send(`Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>\n**Please provide a valid reason**`).catch(error => {
+			return message.channel.send(`${howDoIUseThisCommand(beginMaint)}\n**Please provide a valid reason**`).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
@@ -803,13 +806,7 @@ client.on('message', message => {
 
 		//verifies there are arumgents included, posts error if not
 		if (!args.length) {
-			return message.channel.send(`Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
-**ReadChannel:** Restricts bot to only read commands posted in the provided channel
-**SendChannel:** Restricts bot to only send and edit messages in the provided channel
-**Role:** Restricts only users with this role to run commands
-**Perm:** Restricts only users with this permission to run commands. (Example: MANAGE_EMOJIS)
-**Add:** Replaces the existing restriction. (Bot currently only supports one selection of each, sorry!)
-**Clear:** Removes chosen restriction.`).catch(error => {
+			return message.channel.send(`${howDoIUseThisCommand(setRestrict)}\n`).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
@@ -819,14 +816,7 @@ client.on('message', message => {
 
 		//verifies valid selections
 		if (args[0] != "readchannel" && args[0] != "sendchannel" && args[0] != "role" && args[0] != "perm") {
-			return message.channel.send(`Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
-**ReadChannel:** Restricts bot to only read commands posted in the provided channel
-**SendChannel:** Restricts bot to only send and edit messages in the provided channel
-**Role:** Restricts only users with this role to run commands
-**Perm:** Restricts only users with this permission to run commands. (Example: MANAGE_EMOJIS)
-**Add:** Replaces the existing restriction. (Bot currently only supports one selection of each, sorry!)
-**Clear:** Removes chosen restriction.
-**Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
+			return message.channel.send(`${howDoIUseThisCommand(setRestrict)}\n**Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
@@ -835,14 +825,7 @@ client.on('message', message => {
 
 		//verifies secondary selections
 		if (args[1] != "add" && args[1] != "clear") {
-			return message.channel.send(`Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
-**ReadChannel:** Restricts bot to only read commands posted in the provided channel
-**SendChannel:** Restricts bot to only send and edit messages in the provided channel
-**Role:** Restricts only users with this role to run commands
-**Perm:** Restricts only users with this permission to run commands. (Example: MANAGE_EMOJIS)
-**Add:** Replaces the existing restriction. (Bot currently only supports one selection of each, sorry!)
-**Clear:** Removes chosen restriction.
-**Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
+			return message.channel.send(`${howDoIUseThisCommand(setRestrict)}\n**Invalid Selection, please make sure your message matches exactly the options above shown in "quotation marks"**`).catch(error => {
 				message.react(noReactID).catch(error => {
 					cannotRRLog(message.channel.name,message.guild.name);
 				});
@@ -859,14 +842,7 @@ client.on('message', message => {
 			if (args[1] === "add") {
 				matches = args[2].match(/^<#!?(\d+)>$/);
 				if (!matches) {
-					return message.channel.send(`Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
-**ReadChannel:** Restricts bot to only read commands posted in the provided channel
-**SendChannel:** Restricts bot to only send and edit messages in the provided channel
-**Role:** Restricts only users with this role to run commands
-**Perm:** Restricts only users with this permission to run commands. (Example: MANAGE_EMOJIS)
-**Add:** Replaces the existing restriction. (Bot currently only supports one selection of each, sorry!)
-**Clear:** Removes chosen restriction.
-**Please mention a valid channel**`).catch(error => {
+					return message.channel.send(`${howDoIUseThisCommand(setRestrict)}\n**Please mention a valid channel**`).catch(error => {
 						message.react(noReactID).catch(error => {
 							cannotRRLog(message.channel.name,message.guild.name);
 						});
@@ -893,168 +869,81 @@ client.on('message', message => {
 
 
 
-		//sets readChannel restrction
-		if (args[0] === "readchannel") {
-			for (var i=0 ; i < users.list.length ; i++) {
-				if (users.list[i]['serverID'] == message.guild.id) {
 
+		//grabs existing data from users list and uses it to add/clear the new data
+		for (var i=0 ; i < users.list.length ; i++) {
+			if (users.list[i]['serverID'] == message.guild.id) {
+
+				//if readchannel is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
+				if (args[0] === "readchannel") {
 					if (args[1] === "add") {
 						setReadChannelID = matches[1];
 					} else if (args[1] === "clear") {
 						setReadChannelID = "";
 					}
-
-					if(users.list[i].hasOwnProperty['sendChannelID']) {setSendChannelID = users.list[i]['sendChannelID'];}
-					else {setSendChannelID = ""}
-					if(users.list[i].hasOwnProperty['userRole']) {setUserRole = users.list[i]['userRole'];}
-					else {setUserRole = ""}
-					if(users.list[i].hasOwnProperty['userPerm']) {setUserPerm = users.list[i]['userPerm'];}
-					else {setUserPerm = ""}
-					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-					users.list.splice(i,1,restrictInfoToJson);
-					matchFound = true;
-				} 
-			}
-			if (!matchFound) {
-				if (args[1] === "clear") {
-					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
-						message.react(noReactID).catch(error => {
-							cannotRRLog(message.channel.name,message.guild.name);
-						});
-					});
-				} else if (args[1] === "add") {
-					setReadChannelID = matches[1];
-					setSendChannelID = "";
-					setUserRole = "";
-					setUserPerm = "";
-					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-					users.list.push(restrictInfoToJson);
-				}
-				
-			}
-
-
-
-		//sets sendChannel restrction
-		} else if (args[0] === "sendchannel") {
-			for (var i=0 ; i < users.list.length ; i++) {
-				if (users.list[i]['serverID'] == message.guild.id) {
+				} else {
 					if(users.list[i].hasOwnProperty['readChannelID']) {setReadChannelID = users.list[i]['readChannelID'];}
 					else {setReadChannelID = ""}
+				}
 
+				//if sendchannel is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
+				if (args[0] === "sendchannel") {
 					if (args[1] === "add") {
 						setSendChannelID = matches[1];
 					} else if (args[1] === "clear") {
 						setSendChannelID = "";
 					}
-					
-					if(users.list[i].hasOwnProperty['userRole']) {setUserRole = users.list[i]['userRole'];}
-					else {setUserRole = ""}
-					if(users.list[i].hasOwnProperty['userPerm']) {setUserPerm = users.list[i]['userPerm'];}
-					else {setUserPerm = ""}
-					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-					users.list.splice(i,1,restrictInfoToJson);
-					matchFound = true;
-				} 
-			}
-			if (!matchFound) {
-				if (args[1] === "clear") {
-					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
-						message.react(noReactID).catch(error => {
-							cannotRRLog(message.channel.name,message.guild.name);
-						});
-					});
-				} else if (args[1] === "add") {
-					setReadChannelID = "";
-					setSendChannelID = matches[1];
-					setUserRole = "";
-					setUserPerm = "";
-					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-					users.list.push(restrictInfoToJson);
-				}
-			}
-		
-
-
-
-		//sets Role restrction
-		} else if (args[0] === "role") {
-			for (var i=0 ; i < users.list.length ; i++) {
-				if (users.list[i]['serverID'] == message.guild.id) {
-					if(users.list[i].hasOwnProperty['readChannelID']) {setReadChannelID = users.list[i]['readChannelID'];}
-					else {setReadChannelID = ""}
+				} else {
 					if(users.list[i].hasOwnProperty['sendChannelID']) {setSendChannelID = users.list[i]['sendChannelID'];}
 					else {setSendChannelID = ""}
-
+				}
+				
+				//if role is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
+				if (args[0] === "role") {
 					if (args[1] === "add") {
 						setUserRole = args[2];
 					} else if (args[1] === "clear") {
 						setUserRole = "";
 					}
-					
-					if(users.list[i].hasOwnProperty['userPerm']) {setUserPerm = users.list[i]['userPerm'];}
-					else {setUserPerm = ""}
-					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-					users.list.splice(i,1,restrictInfoToJson);
-					matchFound = true;
-				} 
-			}
-			if (!matchFound) {
-				if (args[1] === "clear") {
-					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
-						message.react(noReactID).catch(error => {
-							cannotRRLog(message.channel.name,message.guild.name);
-						});
-					});
-				} else if (args[1] === "add") {
-					setReadChannelID = "";
-					setSendChannelID = "";
-					setUserRole = args[2];
-					setUserPerm = "";
-					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-					users.list.push(restrictInfoToJson);
-				}
-			}
-
-
-
-		//sets permission restriction
-		} else if (args[0] === "perm") {
-			for (var i=0 ; i < users.list.length ; i++) {
-				if (users.list[i]['serverID'] == message.guild.id) {
-					if(users.list[i].hasOwnProperty['readChannelID']) {setReadChannelID = users.list[i]['readChannelID'];}
-					else {setReadChannelID = ""}
-					if(users.list[i].hasOwnProperty['sendChannelID']) {setSendChannelID = users.list[i]['sendChannelID'];}
-					else {setSendChannelID = ""}
+				} else {
 					if(users.list[i].hasOwnProperty['userRole']) {setUserRole = users.list[i]['userRole'];}
 					else {setUserRole = ""}
-
+				}
+				
+				//if perm is chosen, set or clear it, otherwise use existing value, if there is none, make an empty one
+				if (args[0] === "perm") {
 					if (args[1] === "add") {
 						setUserPerm = args[2];
 					} else if (args[1] === "clear") {
 						setUserPerm = "";
 					}
-					
-					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-					users.list.splice(i,1,restrictInfoToJson);
-					matchFound = true;
-				} 
-			}
-			if (!matchFound) {
-				if (args[1] === "clear") {
-					return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
-						message.react(noReactID).catch(error => {
-							cannotRRLog(message.channel.name,message.guild.name);
-						});
-					});
-				} else if (args[1] === "add") {
-					setReadChannelID = "";
-					setSendChannelID = "";
-					setUserRole = "";
-					setUserPerm = args[2];
-					restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
-					users.list.push(restrictInfoToJson);
+				} else {
+					if(users.list[i].hasOwnProperty['userPerm']) {setUserPerm = users.list[i]['userPerm'];}
+					else {setUserPerm = ""}
 				}
+
+				
+				//adds all the previously compiled values to a json value
+				restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+				users.list.splice(i,1,restrictInfoToJson);
+				matchFound = true;
+			} 
+		}
+		//if they are trying to clear the value, return an error if none were found, otherwise create an empty json with the new value
+		if (!matchFound) {
+			if (args[1] === "clear") {
+				return message.channel.send(`You do not currently have any restrictions set.\nDid you mean: \`${prefix}${setRestrict} ${args[0]} Add \`?`).catch(error => {
+					message.react(noReactID).catch(error => {
+						cannotRRLog(message.channel.name,message.guild.name);
+					});
+				});
+			} else if (args[1] === "add") {
+				setReadChannelID = "";
+				setSendChannelID = "";
+				setUserRole = "";
+				setUserPerm = args[2];
+				restrictInfoToJson = {"serverID": message.guild.id ,"readChannelID":setReadChannelID,"sendChannelID":setSendChannelID,"userRole":setUserRole,"userPerm":setUserPerm};
+				users.list.push(restrictInfoToJson);
 			}
 		}
 
@@ -1142,6 +1031,106 @@ ${prefix}${endMaint} | Bot Onwer only - ends maint`);
 //this is base bot
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//gives print values for command usage
+function howDoIUseThisCommand (whichCommand) {
+	if (whichCommand === setRestrict) {
+		return `Syntax: **${prefix}${setRestrict}** <"readchannel"/"sendchannel"/"role"/"perm"> <"add"/"clear"> <Channel ID/Role ID/Perm ID>
+**ReadChannel:** Restricts bot to only read commands posted in the provided channel
+**SendChannel:** Restricts bot to only send and edit messages in the provided channel
+**Role:** Restricts only users with this role to run commands
+**Perm:** Restricts only users with this permission to run commands (Example: MANAGE_EMOJIS)
+**Add:** Replaces the existing restriction (Bot currently only supports one selection of each, sorry!)
+**Clear:** Removes chosen restriction`;
+	} else if (whichCommand === beginMaint) {
+		return `Syntax: **${prefix}${beginMaint}** <reason: serverMaint/botMaint (owner only)> <optional info>
+Changes all bot messages globally to show as under maintenance`;
+	} else if (whichCommand === endMaint) {
+
+	} else if (whichCommand === beginPosting) {
+		return `Syntax: **${prefix}${beginPosting}** <server> <optional channel>
+The main function of this bot: Posts an updating embed showing the status of a minecraft server`;
+	} else if (whichCommand === beginPostingEdit) {
+		return `Syntax: **${prefix}${beginPostingEdit}** <server> <message id> <optional channel>
+Edits an existing waifubot message and replaces it with the updating server embed`;
+	} else if (whichCommand === refreshUsers) {
+
+	}
+
+
+
+
+
+/*
+var beginPosting = 'mc';
+var beginPostingEdit = 'emc';
+	var setRestrict = 'setres';
+var refreshUsers = 'reus';
+	var beginMaint = 'mts';
+var endMaint = 'mte';
+var helpCommand = 'halp';
+*/
+}
+
+
+
 //valid URL checker
 //https://stackoverflow.com/questions/5717093/check-if-a-javascript-string-is-a-url
 function validURL(str) {
@@ -1156,10 +1145,6 @@ function validURL(str) {
 
 
 
-
-
-
-
 //sleep
 function sleep (time) {
 	return new Promise((resolve) => setTimeout(resolve, time));
@@ -1167,43 +1152,10 @@ function sleep (time) {
 
 
 
-
-
-
-
-
-
-
-
 //print 'Unable to respond'
 function cannotRRLog (channel, server) {
 	console.log(`[${theTime('local')}] Unable to respond to a command in \'${channel}\' on server \'${server}\'`);
 }
-
-
-
-
-
-
-
-
-//print
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1217,11 +1169,6 @@ function theTime (timezone) {
 	}
 	return today;
 }
-
-
-
-
-
 
 
 
