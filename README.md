@@ -3,7 +3,7 @@
    
 Want to run this yourself?  
 Download source  
-Download npm  
+Install node.js  
 in bot folder run:  
 npm install discord.js  
 npm install async  
