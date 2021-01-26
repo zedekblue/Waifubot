@@ -991,7 +991,7 @@ function serverUpdate (loopInfo,embd) {
 				if (error.httpStatus = 404) {addToLog(`[${theTime('')}] Message Deleted, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`,'',true);}
 				else {addToLog(`[${theTime('')}] Too many errors, stopping updates for \'${embd.channel.name}\' on server \'${embd.guild.name}\'`,error,true);}
 			} else if (error.httpStatus != 404) {
-				addToLog(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${fails} times)`,error,true);
+				addToLog(`[${theTime('')}] Error editing embed in \'${embd.channel.name}\' on server \'${embd.guild.name}\' (${loopInfo[2]} times)`,error,true);
 			}
 		});
 
